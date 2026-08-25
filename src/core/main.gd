@@ -37,10 +37,22 @@ func _boot() -> void:
 	var seed_value := int(Settings.get_value("world_seed", 20250825))
 	world_stats = await WorldBuilder.build_staged(world_root, seed_value)
 
+	# Build the hero and pre-warm every creature mesh while the loading screen
+	# is still up. Without this the first spawn of each archetype would stall
+	# mid-fight on its one-off sculpt.
+	Signals.world_build_progress.emit("hero", 0.93)
+	await get_tree().process_frame
 	player = Player.new()
 	player.name = "DigiHariMan"
 	add_child(player)
 	player.global_position = Vector3(0, 1.2, ARENA_RADIUS * 0.55)
+
+	Signals.world_build_progress.emit("creatures", 0.97)
+	await get_tree().process_frame
+	for kind in [Monster.Kind.SWARMER, Monster.Kind.STALKER, Monster.Kind.BRUTE]:
+		var warm := Monster.create_node(kind, {"quality": 1.0})
+		warm.free()
+		await get_tree().process_frame
 
 	camera_rig = CameraRig.new()
 	camera_rig.name = "CameraRig"

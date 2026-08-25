@@ -113,9 +113,11 @@ static func load_texture(path: String) -> Texture2D:
 
 ## Builds (and caches) a PBR material for a role.
 ## `opts` accepts: uv_scale (float), tint (Color), roughness (float),
-## metallic (float), triplanar (bool), detail (bool), emission (Color).
+## metallic (float), triplanar (bool), parallax (bool), emission (Color).
 static func material(role: String, opts: Dictionary = {}) -> StandardMaterial3D:
-	var key := "%s|%s" % [role, JSON.stringify(opts)]
+	# str() rather than JSON.stringify: opts carries Colors, which JSON drops,
+	# and two different tints must not collide on one cache entry.
+	var key := "%s|%s" % [role, str(opts)]
 	if _material_cache.has(key):
 		return _material_cache[key]
 
@@ -137,9 +139,6 @@ static func material(role: String, opts: Dictionary = {}) -> StandardMaterial3D:
 		_apply_procedural(mat, role, opts)
 	else:
 		_apply_photoscan(mat, set_data, opts)
-
-	if bool(opts.get("detail", true)):
-		_apply_detail_layer(mat, role)
 
 	var emission: Color = opts.get("emission", Color(0, 0, 0, 0))
 	if emission.a > 0.0:
@@ -300,18 +299,6 @@ static func _apply_procedural(mat: StandardMaterial3D, role: String, opts: Dicti
 		mat.albedo_color = Color.WHITE
 	if role.begins_with("metal"):
 		mat.metallic = float(opts.get("metallic", 0.9))
-
-## A high-frequency second normal layer keeps surfaces from going flat when the
-## camera is close — the cheapest single upgrade to perceived texture quality.
-static func _apply_detail_layer(mat: StandardMaterial3D, role: String) -> void:
-	mat.detail_enabled = true
-	mat.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MIX
-	mat.detail_uv_layer = BaseMaterial3D.DETAIL_UV_1
-	mat.detail_normal = procedural_normal(role, 512)
-	mat.uv2_scale = Vector3(14.0, 14.0, 14.0)
-	mat.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
-	mat.uv2_triplanar = mat.uv1_triplanar
-	mat.uv2_world_triplanar = mat.uv1_triplanar
 
 # -------------------------------------------------------------- HDRI / sky --
 

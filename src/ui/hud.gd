@@ -114,7 +114,9 @@ func _build_help() -> void:
 	_help = PanelContainer.new()
 	_help.name = "Help"
 	_help.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_help.position = Vector2(-330, 24)
+	_help.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_help.offset_right = -28.0
+	_help.offset_top = 24.0
 	_help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
 	style.bg_color = INK
@@ -208,6 +210,8 @@ func _on_build_progress(stage: String, ratio: float) -> void:
 		"plaza": "中央広場を構築中...",
 		"props": "小物を配置中...",
 		"nature": "植生を散布中...",
+		"hero": "デジハリマンを構築中...",
+		"creatures": "ノイズ体を生成中...",
 		"done": "起動しています...",
 	}
 	if _loading_label != null:

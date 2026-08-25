@@ -98,6 +98,9 @@ static func armor(variant: String = "primary") -> ShaderMaterial:
 			mat.set_shader_parameter("paint_shadow", ORANGE_DEEP)
 	mat.set_shader_parameter("energy_color", ORANGE_EMISSIVE)
 	mat.set_shader_parameter("micro_normal", AssetLibrary.procedural_normal("metal_scifi", 512))
+	# Set explicitly so the hero's energy meter can drive it at runtime; an
+	# unset uniform reads back as null and would be skipped.
+	mat.set_shader_parameter("charge", 0.7)
 	return mat
 
 static func energy(color: Color = ORANGE_EMISSIVE, intensity: float = 8.0) -> ShaderMaterial:

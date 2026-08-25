@@ -303,6 +303,24 @@ static func _district(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
 					body.add_child(shape)
 				inst.add_child(body)
 
+				# Buildings are the level's occluders. Feeding the tier boxes to
+				# the occlusion culler is what stops the renderer paying for the
+				# entire district when the player is standing in one street.
+				var occluder := OccluderInstance3D.new()
+				var box_occluder := BoxOccluder3D.new()
+				var main_tier: Dictionary = template["tiers"][0]
+				var main_size: Vector3 = main_tier["size"]
+				box_occluder.size = Vector3(main_size.x * 0.92, float(template["height"]) * 0.94, main_size.z * 0.92)
+				occluder.occluder = box_occluder
+				occluder.position = Vector3(0, float(template["height"]) * 0.47, 0)
+				inst.add_child(occluder)
+
+				# Rooftop clutter is small and numerous; drop it before the
+				# facade, which still reads as a silhouette at distance.
+				detail_mi.visibility_range_end = Quality.draw_distance() * 0.45
+				detail_mi.visibility_range_end_margin = 25.0
+				detail_mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+
 				node.add_child(inst)
 				stats["buildings"] = int(stats["buildings"]) + 1
 	return node
@@ -407,6 +425,21 @@ static func _plaza(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
 	mmi.material_override = Materials.armor("trim")
 	node.add_child(mmi)
 	stats["props"] = int(stats["props"]) + count
+
+	# Screen-space reflections cannot see anything off-screen, and the arena is
+	# exactly where the player looks down at wet paving. A probe fills in the
+	# monolith and the surrounding facades that SSR has to miss.
+	var probe := ReflectionProbe.new()
+	probe.name = "ArenaProbe"
+	probe.size = Vector3(ARENA_RADIUS * 2.6, 26.0, ARENA_RADIUS * 2.6)
+	probe.origin_offset = Vector3(0, -4.0, 0)
+	probe.position = Vector3(0, 9.0, 0)
+	probe.update_mode = ReflectionProbe.UPDATE_ONCE
+	probe.intensity = 1.0
+	probe.max_distance = 160.0
+	probe.enable_shadows = true
+	probe.ambient_mode = ReflectionProbe.AMBIENT_ENVIRONMENT
+	node.add_child(probe)
 	return node
 
 # ------------------------------------------------------------------- props --
@@ -605,6 +638,9 @@ static func _scatter(parent: Node3D, meshes: Array[Mesh], materials: Array[Mater
 			mmi.material_override = materials[i]
 		mmi.gi_mode = GeometryInstance3D.GI_MODE_STATIC
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		mmi.visibility_range_end = Quality.draw_distance()
+		mmi.visibility_range_end_margin = 40.0
+		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		parent.add_child(mmi)
 		stats["plants"] = int(stats["plants"]) + bucket.size()
 
