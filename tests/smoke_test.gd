@@ -4,16 +4,27 @@ extends SceneTree
 ##   godot --headless --script res://tests/smoke_test.gd
 
 var failures: int = 0
+var _stage: int = 0
 
 func _initialize() -> void:
 	print("== DIGIHARIMAN smoke test ==")
+	_test_polyhaven_planner()
 	_test_shaders()
 	_test_mesh_lib()
 	_test_humanoid()
 	_test_hero()
 	_test_monsters()
-	_report()
-	quit(1 if failures > 0 else 0)
+
+## Skeleton3D only propagates its dirty flag once it is inside an active tree,
+## and SceneTree.root is not active during _initialize — so the animation
+## checks run on the first processed frame instead.
+func _process(_delta: float) -> bool:
+	if _stage == 0:
+		_stage = 1
+		_test_animation()
+		_report()
+		return true
+	return false
 
 func _check(condition: bool, label: String) -> void:
 	if condition:
@@ -181,3 +192,134 @@ func _test_monsters() -> void:
 		var node := Monster.create_node(kind, {"quality": 1.0})
 		_check(node != null and node.get_child(0) is Skeleton3D, "%s node" % profile["name"])
 		node.free()
+
+func _test_polyhaven_planner() -> void:
+	print("-- Poly Haven planner")
+	# The editor plugin re-implements the /files/<slug> parsing that
+	# tools/fetch_polyhaven.py does, so it gets the same fixtures. A drift
+	# between the two would only show up as silently missing maps.
+	var api := PolyHavenAPI.new()
+	var texture_files := {
+		"blend": {"4k": {"blend": {"url": "https://x/rock_ground_4k.blend"}}},
+		"Diffuse": {
+			"1k": {"jpg": {"url": "https://x/rock_ground_diff_1k.jpg"}},
+			"2k": {"jpg": {"url": "https://x/rock_ground_diff_2k.jpg"}, "png": {"url": "https://x/d.png"}},
+		},
+		"nor_gl": {"2k": {"exr": {"url": "https://x/rock_ground_nor_gl_2k.exr"}}},
+		"nor_dx": {"2k": {"exr": {"url": "https://x/rock_ground_nor_dx_2k.exr"}}},
+		"Rough": {"2k": {"exr": {"url": "https://x/rock_ground_rough_2k.exr"}}},
+		"AO": {"2k": {"jpg": {"url": "https://x/rock_ground_ao_2k.jpg"}}},
+		"Displacement": {"2k": {"png": {"url": "https://x/rock_ground_disp_2k.png"}}},
+		"arm": {"2k": {"jpg": {"url": "https://x/rock_ground_arm_2k.jpg"}}},
+	}
+	var jobs: Array = []
+	var entry := api._plan_texture("rock_ground", texture_files, "2k", jobs)
+	for key in ["diffuse", "normal", "rough", "ao", "disp", "arm"]:
+		_check(entry.has(key), "texture map '%s' planned" % key)
+	_check(String(entry["normal"]).contains("_normal_2k"), "OpenGL normal preferred over DirectX")
+	_check(String(entry["diffuse"]).ends_with(".jpg"), "jpg preferred over png")
+	_check(String(entry["diffuse"]).contains("_2k"), "requested resolution used")
+	_check(String(entry["diffuse"]).begins_with("res://assets/polyhaven/"), "res:// destination")
+	var blend_planned := false
+	for job in jobs:
+		if String(job[0]).ends_with(".blend"):
+			blend_planned = true
+	_check(not blend_planned, ".blend not queued for a texture set")
+
+	var hdri_jobs: Array = []
+	var hdri := api._plan_hdri("kloppenheim", {
+		"hdri": {"1k": {"hdr": {"url": "https://x/k_1k.hdr"}, "exr": {"url": "https://x/k_1k.exr"}},
+				 "4k": {"hdr": {"url": "https://x/k_4k.hdr"}}},
+		"tonemapped": {"jpg": {"url": "https://x/k.jpg"}},
+	}, "4k", hdri_jobs)
+	_check(hdri.ends_with("_4k.hdr"), "HDRI resolution and format (%s)" % hdri)
+	_check(hdri_jobs.size() == 1, "one HDRI download queued")
+
+	var model_jobs: Array = []
+	var model := api._plan_model("tree_small_02", {
+		"gltf": {"2k": {"gltf": {
+			"url": "https://x/tree_small_02_2k.gltf",
+			"include": {
+				"tree_small_02_2k.bin": {"url": "https://x/tree_small_02_2k.bin"},
+				"textures/diff_2k.jpg": {"url": "https://x/textures/diff_2k.jpg"},
+			}}}},
+	}, "2k", model_jobs)
+	_check(String(model.get("scene", "")).ends_with(".gltf"), "model scene path")
+	var kept_relative := false
+	for job in model_jobs:
+		if String(job[1]).ends_with("textures/diff_2k.jpg"):
+			kept_relative = true
+	_check(kept_relative, "glTF texture keeps its relative folder")
+	_check(model_jobs.size() == 3, "gltf + bin + texture queued (%d)" % model_jobs.size())
+	api.free()
+
+func _test_animation() -> void:
+	print("-- Procedural animation")
+	var hero := DigiHariMan.create_node({"quality": 1.0})
+	root.add_child(hero)
+	var skeleton := hero.get_child(0) as Skeleton3D
+	var animator := HumanoidAnimator.new(skeleton)
+	hero.add_child(animator)
+	animator.ground_raycast = false
+	animator.speed = 6.0
+	animator.move_local = Vector3(0, 0, -1)
+	animator.grounded = true
+
+	var rest_hand := skeleton.get_bone_global_pose(skeleton.find_bone("Hand.R")).origin
+	var rest_foot := skeleton.get_bone_global_pose(skeleton.find_bone("Foot.L")).origin
+	var moved_hand := 0.0
+	var moved_foot := 0.0
+	var finite := true
+	for i in 40:
+		animator.update(1.0 / 60.0)
+		skeleton.force_update_all_bone_transforms()
+		for b in skeleton.get_bone_count():
+			var o := skeleton.get_bone_global_pose(b).origin
+			if is_nan(o.x) or is_nan(o.y) or is_nan(o.z) or o.length() > 8.0:
+				finite = false
+		moved_hand = maxf(moved_hand, rest_hand.distance_to(skeleton.get_bone_global_pose(skeleton.find_bone("Hand.R")).origin))
+		moved_foot = maxf(moved_foot, rest_foot.distance_to(skeleton.get_bone_global_pose(skeleton.find_bone("Foot.L")).origin))
+
+	# An animator that silently fails to bind its bones poses nothing at all,
+	# which is invisible in code review and obvious only on screen.
+	_check(moved_foot > 0.15, "walk cycle drives the feet (%.3f m)" % moved_foot)
+	_check(moved_hand > 0.08, "arms swing (%.3f m)" % moved_hand)
+	_check(finite, "no NaN or exploded bones over 40 ticks")
+
+	var attack_hand := 0.0
+	animator.attack_pose = "smash"
+	for i in 20:
+		animator.attack_time = float(i) / 19.0
+		animator.update(1.0 / 60.0)
+		skeleton.force_update_all_bone_transforms()
+		attack_hand = maxf(attack_hand, rest_hand.distance_to(skeleton.get_bone_global_pose(skeleton.find_bone("Hand.R")).origin))
+	_check(attack_hand > 0.3, "attack pose swings the striking arm (%.3f m)" % attack_hand)
+	hero.queue_free()
+
+	print("-- Quadruped animation")
+	var beast := Monster.create_node(Monster.Kind.STALKER, {"quality": 1.0})
+	root.add_child(beast)
+	var beast_skeleton := beast.get_child(0) as Skeleton3D
+	var beast_animator := MonsterAnimator.new(beast_skeleton)
+	beast.add_child(beast_animator)
+	beast_animator.speed = 6.0
+	beast_animator.move_local = Vector3(0, 0, -1)
+	var rest_paw := beast_skeleton.get_bone_global_pose(beast_skeleton.find_bone("FrontFoot.L")).origin
+	var rest_tail := beast_skeleton.get_bone_global_pose(beast_skeleton.find_bone("Tail4")).origin
+	var moved_paw := 0.0
+	var moved_tail := 0.0
+	var beast_finite := true
+	for i in 40:
+		beast_animator.turn_rate = sin(float(i) * 0.3)
+		beast_animator.update(1.0 / 60.0)
+		beast_skeleton.force_update_all_bone_transforms()
+		for b in beast_skeleton.get_bone_count():
+			var o := beast_skeleton.get_bone_global_pose(b).origin
+			if is_nan(o.x) or is_nan(o.y) or is_nan(o.z) or o.length() > 12.0:
+				beast_finite = false
+		moved_paw = maxf(moved_paw, rest_paw.distance_to(beast_skeleton.get_bone_global_pose(beast_skeleton.find_bone("FrontFoot.L")).origin))
+		moved_tail = maxf(moved_tail, rest_tail.distance_to(beast_skeleton.get_bone_global_pose(beast_skeleton.find_bone("Tail4")).origin))
+	_check(moved_paw > 0.15, "trot drives the front paw (%.3f m)" % moved_paw)
+	_check(moved_tail > 0.02, "tail chain follows the turn (%.3f m)" % moved_tail)
+	_check(beast_finite, "no NaN or exploded bones over 40 ticks")
+	beast.queue_free()

@@ -40,6 +40,7 @@ var _land_squash: float = 0.0
 
 var _b := {}
 var _finger_chains := {"L": [], "R": []}
+var _bones_cached: bool = false
 
 func _init(target_skeleton: Skeleton3D) -> void:
 	name = "Animator"
@@ -48,7 +49,13 @@ func _init(target_skeleton: Skeleton3D) -> void:
 func _ready() -> void:
 	_cache_bones()
 
+## Caching is idempotent and also runs lazily from update(), so an animator that
+## is driven before it enters the tree still poses instead of silently doing
+## nothing.
 func _cache_bones() -> void:
+	if skeleton == null:
+		return
+	_bones_cached = true
 	for n in ["Root", "Hips", "Spine", "Chest", "UpperChest", "Neck", "Head", "HeadTop"]:
 		_b[n] = skeleton.find_bone(n)
 	for s in ["L", "R"]:
@@ -70,6 +77,8 @@ func bone(name: String) -> int:
 func update(delta: float) -> void:
 	if skeleton == null:
 		return
+	if not _bones_cached:
+		_cache_bones()
 	PoseKit.reset(skeleton)
 
 	var stride := clampf(BASE_STRIDE * sqrt(maxf(speed, 0.0)), 0.55, MAX_STRIDE)

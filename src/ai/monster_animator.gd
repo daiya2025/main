@@ -30,6 +30,7 @@ var _tail_offsets: Array[float] = []
 var _tail_velocity: Array[float] = []
 var _b := {}
 var _tail_bones: PackedInt32Array = PackedInt32Array()
+var _bones_cached: bool = false
 
 const LEGS := [
 	{"prefix": "Front", "side": "L", "phase": 0.0, "root": "Shoulder"},
@@ -43,6 +44,17 @@ func _init(target_skeleton: Skeleton3D) -> void:
 	skeleton = target_skeleton
 
 func _ready() -> void:
+	_cache_bones()
+
+## Idempotent, and also called lazily from update() so an animator driven
+## before it enters the tree still poses.
+func _cache_bones() -> void:
+	if skeleton == null:
+		return
+	_bones_cached = true
+	_tail_bones = PackedInt32Array()
+	_tail_offsets.clear()
+	_tail_velocity.clear()
 	for n in ["Hips", "Spine1", "Spine2", "Chest", "Neck1", "Neck2", "Head", "Jaw", "HeadEnd"]:
 		_b[n] = skeleton.find_bone(n)
 	for leg in LEGS:
@@ -65,6 +77,8 @@ func bone(name: String) -> int:
 func update(delta: float) -> void:
 	if skeleton == null:
 		return
+	if not _bones_cached:
+		_cache_bones()
 	PoseKit.reset(skeleton)
 
 	var stride := clampf(BASE_STRIDE * stride_scale * sqrt(maxf(speed, 0.0)), 0.5, 3.4)
