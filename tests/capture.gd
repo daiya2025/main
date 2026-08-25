@@ -6,9 +6,9 @@ extends SceneTree
 ##   xvfb-run -a godot --path . --rendering-driver opengl3 \
 ##       --resolution 960x540 --script res://tests/capture.gd
 
-const FIRST_SHOT := 120
-const INTERVAL := 30
-const COUNT := 3
+const FIRST_SHOT := 24
+const INTERVAL := 6
+const COUNT := 2
 
 var frames: int = 0
 var shots: int = 0
@@ -18,7 +18,7 @@ func _initialize() -> void:
 
 func _process(_delta: float) -> bool:
 	frames += 1
-	if frames % 20 == 0:
+	if frames % 4 == 0:
 		print("frame %d" % frames)
 	if frames < FIRST_SHOT or (frames - FIRST_SHOT) % INTERVAL != 0:
 		return false

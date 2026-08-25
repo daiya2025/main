@@ -448,9 +448,11 @@ static func arrays_to_mesh(arrays: Array, material: Material = null, name: Strin
 static func append_mesh(st: SurfaceTool, mesh: Mesh, xform: Transform3D, surface: int = 0) -> void:
 	st.append_from(mesh, surface, xform)
 
-## Generates discrete LODs on an ArrayMesh via the importer's meshoptimizer
-## path. Silently no-ops on engine builds where the API is unavailable.
+## Generates discrete LODs on an ArrayMesh through the importer's
+## meshoptimizer path, and returns the mesh that carries them.
 static func with_lods(mesh: ArrayMesh, material: Material = null, normal_merge_deg: float = 25.0) -> ArrayMesh:
+	if not ClassDB.class_exists("ImporterMesh"):
+		return mesh
 	var importer := ImporterMesh.new()
 	for s in mesh.get_surface_count():
 		var mat: Material = material if material != null else mesh.surface_get_material(s)
@@ -462,19 +464,30 @@ static func with_lods(mesh: ArrayMesh, material: Material = null, normal_merge_d
 			mat,
 			mesh.surface_get_name(s),
 			mesh.surface_get_format(s))
-	var ok := false
-	if importer.has_method("generate_lods"):
-		# Godot changed this signature between 4.x point releases; try both.
-		var args_4 := [normal_merge_deg, 60.0, []]
-		var result: Variant = importer.callv("generate_lods", args_4)
-		ok = result == null
-		if not ok:
-			importer.callv("generate_lods", [normal_merge_deg, []])
-			ok = true
-	if not ok:
-		return mesh
+	importer.generate_lods(normal_merge_deg, 60.0, [])
 	var built := importer.get_mesh()
 	return built if built != null else mesh
+
+## Same as with_lods() but reports how many LOD levels each surface got, so a
+## test can assert the reduction actually happened rather than trusting it.
+static func lod_levels(mesh: ArrayMesh, normal_merge_deg: float = 25.0) -> PackedInt32Array:
+	var levels := PackedInt32Array()
+	if not ClassDB.class_exists("ImporterMesh"):
+		return levels
+	var importer := ImporterMesh.new()
+	for s in mesh.get_surface_count():
+		importer.add_surface(
+			mesh.surface_get_primitive_type(s),
+			mesh.surface_get_arrays(s),
+			[],
+			{},
+			mesh.surface_get_material(s),
+			mesh.surface_get_name(s),
+			mesh.surface_get_format(s))
+	importer.generate_lods(normal_merge_deg, 60.0, [])
+	for s in importer.get_surface_count():
+		levels.append(importer.get_surface_lod_count(s))
+	return levels
 
 ## Collision shape helpers -----------------------------------------------------
 

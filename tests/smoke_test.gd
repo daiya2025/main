@@ -70,6 +70,8 @@ func _test_mesh_lib() -> void:
 
 	var lod_mesh := MeshLib.with_lods(final_mesh)
 	_check(lod_mesh != null and lod_mesh.get_surface_count() == 1, "LOD generation")
+	var levels := MeshLib.lod_levels(final_mesh)
+	_check(levels.size() == 1 and levels[0] > 0, "LOD levels produced (%s)" % str(levels))
 
 func _report() -> void:
 	if failures == 0:

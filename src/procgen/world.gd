@@ -217,35 +217,41 @@ static func _streets(rng: RandomNumberGenerator) -> Node3D:
 
 # --------------------------------------------------------------- buildings --
 
-static func _building_templates(rng: RandomNumberGenerator) -> Array:
+static func _building_templates(base_seed: int) -> Array:
 	var templates: Array = []
 	var styles := [Building.Style.TOWER, Building.Style.BLOCK, Building.Style.PODIUM_TOWER, Building.Style.LOW_RISE]
 	for i in TEMPLATE_COUNT:
+		# Each template owns three deterministic streams: one for its
+		# dimensions, one for the tier plan and one for the mesh detail. The
+		# tier plan is computed *outside* the cached closure, because the
+		# collision boxes come from it and the mesh may be served from disk.
+		var dims := RandomNumberGenerator.new()
+		dims.seed = base_seed * 7919 + i
 		var style: Building.Style = styles[i % styles.size()]
-		var footprint := Vector2(rng.randf_range(13.0, 19.0), rng.randf_range(13.0, 19.0))
-		var floors := rng.randi_range(3, 6) if style == Building.Style.LOW_RISE else rng.randi_range(7, 22)
+		var footprint := Vector2(dims.randf_range(13.0, 19.0), dims.randf_range(13.0, 19.0))
+		var floors := dims.randi_range(3, 6) if style == Building.Style.LOW_RISE else dims.randi_range(7, 22)
+
+		var plan_rng := RandomNumberGenerator.new()
+		plan_rng.seed = base_seed * 7919 + i + 104729
+		var tiers := Building._plan_tiers(plan_rng, style, footprint, floors)
+		var height := Building.plan_height(tiers)
+
 		var key := "building_%d" % i
 		var state := {"data": null}
+		var mesh_seed := base_seed * 7919 + i + 224737
 		var facade_mesh := BuildCache.mesh(key + "_facade", func() -> Mesh:
 			if state["data"] == null:
-				state["data"] = Building.build(rng, style, footprint, floors)
+				var mesh_rng := RandomNumberGenerator.new()
+				mesh_rng.seed = mesh_seed
+				state["data"] = Building.build(mesh_rng, style, footprint, floors, tiers)
 			return MeshLib.with_lods(MeshLib.arrays_to_mesh((state["data"] as Dictionary)["facade"], null, "facade")))
 		var detail_mesh := BuildCache.mesh(key + "_detail", func() -> Mesh:
 			if state["data"] == null:
-				state["data"] = Building.build(rng, style, footprint, floors)
+				var mesh_rng := RandomNumberGenerator.new()
+				mesh_rng.seed = mesh_seed
+				state["data"] = Building.build(mesh_rng, style, footprint, floors, tiers)
 			return MeshLib.with_lods(MeshLib.arrays_to_mesh((state["data"] as Dictionary)["detail"], null, "detail")))
-		# Tier boxes are cheap to recompute and are needed for collision.
-		var tiers: Array = []
-		var height := 0.0
-		if state["data"] != null:
-			tiers = (state["data"] as Dictionary)["tiers"]
-			height = float((state["data"] as Dictionary)["height"])
-		else:
-			var replan := RandomNumberGenerator.new()
-			replan.seed = rng.seed + i
-			tiers = Building._plan_tiers(replan, style, footprint, floors)
-			for t in tiers:
-				height = maxf(height, float(t["base"]) + (t["size"] as Vector3).y)
+
 		templates.append({
 			"facade": facade_mesh, "detail": detail_mesh, "tiers": tiers,
 			"height": height, "footprint": footprint, "style": style})
@@ -254,7 +260,7 @@ static func _building_templates(rng: RandomNumberGenerator) -> Array:
 static func _district(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
 	var node := Node3D.new()
 	node.name = "District"
-	var templates := _building_templates(rng)
+	var templates := _building_templates(int(rng.seed))
 	var roles := ["concrete_wall", "brick", "concrete_floor", "metal_plate"]
 	var half := float(GRID) * 0.5
 	var detail_material := AssetLibrary.material("concrete_floor", {

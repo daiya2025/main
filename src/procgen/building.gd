@@ -12,10 +12,16 @@ const FLOOR_HEIGHT := 3.4
 
 enum Style { TOWER, BLOCK, PODIUM_TOWER, LOW_RISE }
 
-## Returns { facade: arrays, detail: arrays, glass_strips: arrays, height: float,
-##           footprint: Vector2, tiers: Array }
-static func build(rng: RandomNumberGenerator, style: Style, footprint: Vector2, floors: int) -> Dictionary:
-	var tiers := _plan_tiers(rng, style, footprint, floors)
+## Returns { facade: arrays, detail: arrays, height: float, footprint: Vector2,
+##           tiers: Array }.
+##
+## `tiers` may be supplied by the caller. Callers that cache the resulting mesh
+## must do so, because the collision boxes are derived from the tiers and the
+## two would otherwise drift apart the moment the mesh comes back from cache
+## instead of being rebuilt.
+static func build(rng: RandomNumberGenerator, style: Style, footprint: Vector2, floors: int,
+		precomputed_tiers: Array = []) -> Dictionary:
+	var tiers := precomputed_tiers if not precomputed_tiers.is_empty() else _plan_tiers(rng, style, footprint, floors)
 
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -206,6 +212,13 @@ static func _roof_kit(rng: RandomNumberGenerator, offset: Vector2, size: Vector3
 			Vector3(offset.x + rng.randf_range(-hx * 0.5, hx * 0.5), top_y,
 				offset.y + rng.randf_range(-hz * 0.5, hz * 0.5))))
 	return kit
+
+## Height of the tallest point of a tier plan.
+static func plan_height(tiers: Array) -> float:
+	var height := 0.0
+	for tier in tiers:
+		height = maxf(height, float(tier["base"]) + (tier["size"] as Vector3).y)
+	return height
 
 ## Assembles the finished building node with collision.
 static func create_node(rng: RandomNumberGenerator, style: Style, footprint: Vector2, floors: int, role: String = "concrete_wall") -> Node3D:
