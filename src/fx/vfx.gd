@@ -35,6 +35,10 @@ static func _billboard_material(color: Color, energy: float) -> StandardMaterial
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	# Without keep_scale a particle billboard ignores its own scale and draws at
+	# the source quad's size, which turns a fine spark spray into a wall of
+	# squares big enough to hide the character behind it.
+	mat.billboard_keep_scale = true
 	mat.particles_anim_h_frames = 1
 	mat.particles_anim_v_frames = 1
 	mat.vertex_color_use_as_albedo = true
@@ -82,8 +86,8 @@ static func impact(parent: Node, world_pos: Vector3, normal: Vector3, color: Col
 	process.turbulence_noise_strength = 1.4
 	process.turbulence_noise_scale = 3.0
 	particles.process_material = process
-	particles.draw_pass_1 = _quad(0.16)
-	particles.material_override = _billboard_material(Color.WHITE, 3.5)
+	particles.draw_pass_1 = _quad(0.10)
+	particles.material_override = _billboard_material(Color.WHITE, 2.2)
 
 	particles.position = world_pos
 	particles.top_level = true
@@ -154,8 +158,8 @@ static func dash_trail(parent: Node3D, color: Color = Materials.ORANGE_EMISSIVE)
 	process.color_ramp = _gradient(
 		[Color(1.0, 0.85, 0.55, 0.9), color, Color(0.35, 0.10, 0.02, 0.0)], [0.0, 0.4, 1.0])
 	particles.process_material = process
-	particles.draw_pass_1 = _quad(0.2)
-	particles.material_override = _billboard_material(Color.WHITE, 2.6)
+	particles.draw_pass_1 = _quad(0.12)
+	particles.material_override = _billboard_material(Color.WHITE, 1.5)
 	parent.add_child(particles)
 	return particles
 
@@ -163,28 +167,33 @@ static func dash_trail(parent: Node3D, color: Color = Materials.ORANGE_EMISSIVE)
 static func aura(parent: Node3D, color: Color = Materials.ORANGE_EMISSIVE) -> GPUParticles3D:
 	var particles := GPUParticles3D.new()
 	particles.name = "Aura"
-	particles.amount = int(50 * Quality.particle_scale()) + 8
-	particles.lifetime = 1.5
+	particles.amount = int(20 * Quality.particle_scale()) + 4
+	particles.lifetime = 1.3
 	particles.emitting = true
 	particles.local_coords = false
 	var process := ParticleProcessMaterial.new()
-	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
-	process.emission_box_extents = Vector3(0.35, 0.95, 0.28)
+	# A ring around the silhouette rather than a cloud through it: the aura is
+	# meant to read at the edges, not to sit on top of the armour.
+	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_RING
+	process.emission_ring_axis = Vector3(0, 1, 0)
+	process.emission_ring_height = 1.7
+	process.emission_ring_radius = 0.52
+	process.emission_ring_inner_radius = 0.42
 	process.direction = Vector3(0, 1, 0)
-	process.spread = 18.0
+	process.spread = 14.0
 	process.initial_velocity_min = 0.15
-	process.initial_velocity_max = 0.7
-	process.gravity = Vector3(0, 0.6, 0)
-	process.scale_min = 0.04
-	process.scale_max = 0.14
+	process.initial_velocity_max = 0.6
+	process.gravity = Vector3(0, 0.5, 0)
+	process.scale_min = 0.25
+	process.scale_max = 0.8
 	process.scale_curve = _curve([[0.0, 0.0], [0.3, 1.0], [1.0, 0.0]])
 	process.color_ramp = _gradient(
 		[Color(1.0, 0.7, 0.35, 0.0), color, Color(1.0, 0.35, 0.05, 0.0)], [0.0, 0.35, 1.0])
 	process.turbulence_enabled = true
 	process.turbulence_noise_strength = 0.9
 	particles.process_material = process
-	particles.draw_pass_1 = _quad(0.12)
-	particles.material_override = _billboard_material(Color.WHITE, 2.2)
+	particles.draw_pass_1 = _quad(0.05)
+	particles.material_override = _billboard_material(Color.WHITE, 1.1)
 	parent.add_child(particles)
 	return particles
 
@@ -217,8 +226,8 @@ static func dissolve(parent: Node, world_pos: Vector3, scale: float = 1.0) -> vo
 	process.turbulence_enabled = true
 	process.turbulence_noise_strength = 2.2
 	particles.process_material = process
-	particles.draw_pass_1 = _quad(0.18)
-	particles.material_override = _billboard_material(Color.WHITE, 3.0)
+	particles.draw_pass_1 = _quad(0.12)
+	particles.material_override = _billboard_material(Color.WHITE, 2.0)
 	particles.position = world_pos
 	parent.add_child(particles)
 

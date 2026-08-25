@@ -430,7 +430,7 @@ func _update_animation(delta: float, wish: Vector3) -> void:
 			if mat != null and mat.shader != null and mat.get_shader_parameter("charge") != null:
 				mat.set_shader_parameter("charge", 0.25 + charge * 0.75)
 	if _aura != null:
-		_aura.amount_ratio = clampf(0.2 + charge * 0.8, 0.0, 1.0)
+		_aura.amount_ratio = clampf(charge * charge * 0.75, 0.0, 1.0)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("lock_on"):

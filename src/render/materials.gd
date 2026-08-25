@@ -86,13 +86,13 @@ static func armor(variant: String = "primary") -> ShaderMaterial:
 			mat.set_shader_parameter("paint_shadow", Color(0.028, 0.030, 0.036))
 			mat.set_shader_parameter("flake_amount", 0.18)
 			mat.set_shader_parameter("paint_roughness", 0.35)
-			mat.set_shader_parameter("energy_emission", 6.0)
+			mat.set_shader_parameter("energy_emission", 2.5)
 		"trim":
 			mat.set_shader_parameter("paint_color", ORANGE_HOT)
 			mat.set_shader_parameter("paint_shadow", ORANGE_DEEP)
 			mat.set_shader_parameter("flake_amount", 0.5)
 			mat.set_shader_parameter("paint_roughness", 0.18)
-			mat.set_shader_parameter("energy_emission", 22.0)
+			mat.set_shader_parameter("energy_emission", 9.0)
 		_:
 			mat.set_shader_parameter("paint_color", ORANGE_PRIMARY)
 			mat.set_shader_parameter("paint_shadow", ORANGE_DEEP)

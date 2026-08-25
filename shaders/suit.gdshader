@@ -19,7 +19,7 @@ uniform float sheen_strength : hint_range(0.0, 3.0) = 0.85;
 
 group_uniforms Accent;
 uniform vec4 accent_color : source_color = vec4(1.0, 0.42, 0.06, 1.0);
-uniform float accent_emission : hint_range(0.0, 24.0) = 6.5;
+uniform float accent_emission : hint_range(0.0, 24.0) = 3.0;
 uniform float accent_width : hint_range(0.001, 0.2) = 0.022;
 uniform float charge : hint_range(0.0, 1.0) = 0.55;
 uniform float pulse_speed : hint_range(0.0, 8.0) = 1.6;

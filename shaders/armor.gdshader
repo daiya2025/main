@@ -25,7 +25,7 @@ uniform float clearcoat_roughness : hint_range(0.0, 1.0) = 0.06;
 
 group_uniforms Energy;
 uniform vec4 energy_color : source_color = vec4(1.0, 0.48, 0.10, 1.0);
-uniform float energy_emission : hint_range(0.0, 40.0) = 14.0;
+uniform float energy_emission : hint_range(0.0, 40.0) = 5.5;
 uniform float energy_width : hint_range(0.001, 0.2) = 0.018;
 uniform float charge : hint_range(0.0, 1.0) = 0.7;
 uniform float pulse_speed : hint_range(0.0, 12.0) = 2.4;
