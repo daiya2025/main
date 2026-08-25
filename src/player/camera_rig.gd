@@ -178,7 +178,11 @@ func _follow(delta: float) -> void:
 		desired_distance += 0.9
 	distance = lerpf(distance, desired_distance, 1.0 - pow(0.01, delta))
 	_arm.spring_length = distance
-	_camera.position = Vector3(shoulder_offset * (1.0 - clampf(speed / 12.0, 0.0, 0.6)), 0.0, 0.0)
+	# The over-the-shoulder offset has to live on the arm, not the camera:
+	# SpringArm3D rewrites its children's global origin every frame, so a local
+	# offset on the Camera3D is silently discarded. Offsetting the arm moves the
+	# ray cast origin too, which is what we want anyway.
+	_arm.position = Vector3(shoulder_offset * (1.0 - clampf(speed / 12.0, 0.0, 0.6)), 0.0, 0.0)
 
 func _apply_lock_on(delta: float) -> void:
 	if lock_on_target == null or not is_instance_valid(lock_on_target):
@@ -274,4 +278,5 @@ func _process_photo(delta: float) -> void:
 	_photo_velocity = _photo_velocity.lerp(wish, 1.0 - pow(0.005, delta))
 	global_position += _photo_velocity * delta
 	_pivot.rotation = Vector3(pitch, yaw, 0.0)
+	_arm.position = Vector3.ZERO
 	_arm.spring_length = 0.0

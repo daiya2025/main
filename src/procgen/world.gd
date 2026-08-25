@@ -278,6 +278,15 @@ static func _district(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
 				var jitter := Vector3(rng.randf_range(-3.5, 3.5), 0.0, rng.randf_range(-3.5, 3.5))
 				if per_block > 1:
 					jitter.x += (float(b) - 0.5) * 8.0
+				# The block-centre test above is not enough: jitter plus a podium
+				# footprint can still push a corner into the arena, and a wall
+				# metres from the spawn point reads as a bug even though the
+				# block it belongs to was "outside".
+				var footprint: Vector2 = template["footprint"]
+				var reach := footprint.length() * 0.5 * 1.2      # half-diagonal, podium allowance
+				var placed := Vector2(cx + jitter.x, cz + jitter.z)
+				if placed.length() - reach < ARENA_RADIUS + 3.0:
+					continue
 				var inst := Node3D.new()
 				inst.name = "Building_%d_%d_%d" % [gx, gz, b]
 				inst.position = Vector3(cx, 0.28, cz) + jitter
@@ -287,7 +296,7 @@ static func _district(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
 				facade_mi.mesh = template["facade"]
 				facade_mi.material_override = Materials.facade(
 					roles[rng.randi() % roles.size()], int(rng.randi()),
-					Building.FLOOR_HEIGHT, rng.randf_range(2.2, 3.2), rng.randf_range(0.15, 0.55))
+					Building.FLOOR_HEIGHT, rng.randf_range(2.2, 3.2), rng.randf_range(0.10, 0.38))
 				facade_mi.gi_mode = GeometryInstance3D.GI_MODE_STATIC
 				inst.add_child(facade_mi)
 

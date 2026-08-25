@@ -16,8 +16,10 @@ var sun: DirectionalLight3D
 var fill: DirectionalLight3D
 var environment: Environment
 
-## Hours, 0-24. 17.4 is the low, warm key the district was lit for.
-var time_of_day: float = 17.4
+## Hours, 0-24. 17.0 puts the sun about 14 degrees up: still a raking, warm key
+## with long shadows, but high enough that a street between 20-storey towers is
+## readable. Below roughly 16.5 the district goes to silhouette.
+var time_of_day: float = 17.0
 var day_length_seconds: float = 0.0    # 0 = frozen
 
 func _init(mood: String = "golden_hour") -> void:
@@ -54,7 +56,7 @@ func _init(mood: String = "golden_hour") -> void:
 	fill = DirectionalLight3D.new()
 	fill.name = "FillLight"
 	fill.light_color = Color(0.55, 0.68, 0.92)
-	fill.light_energy = 0.55
+	fill.light_energy = 0.85
 	fill.light_indirect_energy = 0.6
 	fill.shadow_enabled = false
 	fill.light_specular = 0.15
@@ -102,7 +104,7 @@ func _build_environment(mood: String) -> Environment:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 1.0
-	env.ambient_light_energy = 1.0
+	env.ambient_light_energy = 1.15
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 
 	# --- tonemapping -------------------------------------------------------
@@ -206,8 +208,8 @@ func apply_time_of_day(hours: float) -> void:
 	sun.light_energy = lerpf(4.4, 1.6, horizon)
 	var night := clampf((-elevation) / 8.0, 0.0, 1.0)
 	sun.light_energy = lerpf(sun.light_energy, 0.05, night)
-	fill.light_energy = lerpf(0.55, 0.22, night)
-	environment.ambient_light_energy = lerpf(1.0, 0.35, night)
+	fill.light_energy = lerpf(0.85, 0.28, night)
+	environment.ambient_light_energy = lerpf(1.15, 0.40, night)
 	environment.volumetric_fog_density = lerpf(0.028, 0.045, horizon)
 	environment.tonemap_exposure = lerpf(0.92, 1.25, night)
 	time_of_day_changed.emit(hours)

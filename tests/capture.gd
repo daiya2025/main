@@ -7,9 +7,9 @@ extends SceneTree
 ##       --script res://tests/capture.gd
 
 const VIEWPORT := Vector2i(800, 450)
-const FIRST_SHOT := 40
-const INTERVAL := 12
-const COUNT := 3
+const FIRST_SHOT := 26
+const INTERVAL := 10
+const COUNT := 2
 
 var frames: int = 0
 var shots: int = 0

@@ -233,7 +233,7 @@ static func create_node(rng: RandomNumberGenerator, style: Style, footprint: Vec
 	facade_mi.mesh = facade_mesh
 	facade_mi.material_override = Materials.facade(
 		role, int(rng.randi()), FLOOR_HEIGHT,
-		rng.randf_range(2.2, 3.2), rng.randf_range(0.18, 0.55))
+		rng.randf_range(2.2, 3.2), rng.randf_range(0.10, 0.38))
 	facade_mi.gi_mode = GeometryInstance3D.GI_MODE_STATIC
 	root.add_child(facade_mi)
 

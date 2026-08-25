@@ -29,8 +29,8 @@ uniform float glass_roughness : hint_range(0.0, 1.0) = 0.05;
 
 group_uniforms Lights;
 uniform vec4 room_light : source_color = vec4(1.0, 0.66, 0.32, 1.0);
-uniform float lit_ratio : hint_range(0.0, 1.0) = 0.35;
-uniform float light_energy : hint_range(0.0, 24.0) = 4.5;
+uniform float lit_ratio : hint_range(0.0, 1.0) = 0.28;
+uniform float light_energy : hint_range(0.0, 24.0) = 2.8;
 
 group_uniforms Weathering;
 uniform vec4 streak_color : source_color = vec4(0.20, 0.19, 0.18, 1.0);
