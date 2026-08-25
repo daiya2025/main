@@ -147,8 +147,11 @@ func _apply_to_nodes() -> void:
 	var vp := get_viewport()
 	if vp != null:
 		vp.msaa_3d = config["msaa"]
-		vp.use_taa = config["taa"]
-		vp.scaling_3d_mode = config["scaling_mode"]
+		# TAA and FSR2 are Forward+ only; asking for them under the
+		# Compatibility renderer is an error, not a silent no-op.
+		if forward_plus():
+			vp.use_taa = config["taa"]
+			vp.scaling_3d_mode = config["scaling_mode"]
 		vp.scaling_3d_scale = config["scaling"]
 		vp.fsr_sharpness = 0.25
 		vp.use_debanding = true
@@ -171,6 +174,10 @@ func _apply_to_nodes() -> void:
 			DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if int(config["shadow_splits"]) >= 4
 			else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 		)
+
+## True when the Forward+ (clustered) renderer is active.
+func forward_plus() -> bool:
+	return String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "forward_plus")) == "forward_plus"
 
 func foliage_density() -> float:
 	return float(config["foliage_density"])

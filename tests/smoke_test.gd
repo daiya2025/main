@@ -11,6 +11,7 @@ func _initialize() -> void:
 	_test_mesh_lib()
 	_test_humanoid()
 	_test_hero()
+	_test_monsters()
 	_report()
 	quit(1 if failures > 0 else 0)
 
@@ -161,3 +162,20 @@ func _test_shaders() -> void:
 		_check(uniforms.size() > 0, "%s compiles (%d uniforms)" % [f, uniforms.size()])
 		count += 1
 	_check(count >= 12, "all %d shaders checked" % count)
+
+func _test_monsters() -> void:
+	print("-- Monsters")
+	for kind in [Monster.Kind.STALKER, Monster.Kind.BRUTE, Monster.Kind.SWARMER]:
+		var t0 := Time.get_ticks_msec()
+		var parts := Monster.build(kind, {"quality": 1.0})
+		var stats: Dictionary = parts["stats"]
+		var profile: Dictionary = parts["profile"]
+		print("     %-8s %6d tris / %d bones / %d ms" % [profile["name"], stats["flesh_tris"], stats["bones"], Time.get_ticks_msec() - t0])
+		_check(int(stats["flesh_tris"]) > 20000, "%s density" % profile["name"])
+		var skinned := Skinning.skin_arrays(parts["groups"]["flesh"], parts["segments"])
+		var w: PackedFloat32Array = skinned[Mesh.ARRAY_WEIGHTS]
+		var v: PackedVector3Array = skinned[Mesh.ARRAY_VERTEX]
+		_check(w.size() == v.size() * 4, "%s skinning" % profile["name"])
+		var node := Monster.create_node(kind, {"quality": 1.0})
+		_check(node != null and node.get_child(0) is Skeleton3D, "%s node" % profile["name"])
+		node.free()

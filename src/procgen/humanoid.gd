@@ -146,74 +146,10 @@ static func _is_finger(bone_name: String) -> bool:
 static func tube(control: PackedVector3Array, keys: Array, segments: int, samples_per_span: int,
 		lobes: PackedFloat32Array = PackedFloat32Array(), cap_start: bool = true, cap_end: bool = true,
 		v_scale: float = 1.0) -> Array:
-	var path := MeshLib.catmull_rom(control, samples_per_span)
-	var frames := MeshLib.rmf_frames(path, Vector3.FORWARD)
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-
-	var rings: Array = []
-	var vs := PackedFloat32Array()
-	var arc := 0.0
-	for i in path.size():
-		var t := float(i) / float(maxi(path.size() - 1, 1))
-		var rk := _sample_keys(keys, t)
-		var ring := MeshLib.lobed_ring(rk.x, rk.y, segments, lobes, rk.z)
-		rings.append(MeshLib.place_ring(ring, path[i], frames[i]))
-		if i > 0:
-			arc += path[i].distance_to(path[i - 1])
-		vs.append(arc * v_scale)
-	MeshLib.stitch(st, rings, vs, 1.0, 0)
-	if cap_start:
-		MeshLib.cap_ring(st, rings[0], path[0] - (path[1] - path[0]).normalized() * 0.004, vs[0], true, 0)
-	if cap_end:
-		var last := rings.size() - 1
-		MeshLib.cap_ring(st, rings[last], path[last] + (path[last] - path[last - 1]).normalized() * 0.004, vs[last], false, 0)
-	st.generate_normals()
-	st.index()
-	var mesh: ArrayMesh = st.commit()
-	return MeshLib.weld(mesh.surface_get_arrays(0), 0.0006)
-
-## Linear interpolation between radius keys -> Vector3(rx, rz, n).
-static func _sample_keys(keys: Array, t: float) -> Vector3:
-	if keys.is_empty():
-		return Vector3(0.1, 0.1, 2.0)
-	if t <= float(keys[0][0]):
-		return Vector3(keys[0][1], keys[0][2], keys[0][3])
-	for i in range(keys.size() - 1):
-		var k0: Array = keys[i]
-		var k1: Array = keys[i + 1]
-		if t <= float(k1[0]):
-			var span := maxf(float(k1[0]) - float(k0[0]), 0.00001)
-			var f := (t - float(k0[0])) / span
-			f = f * f * (3.0 - 2.0 * f)
-			return Vector3(
-				lerpf(k0[1], k1[1], f),
-				lerpf(k0[2], k1[2], f),
-				lerpf(k0[3], k1[3], f))
-	var last: Array = keys[keys.size() - 1]
-	return Vector3(last[1], last[2], last[3])
+	return MeshLib.tube(control, keys, segments, samples_per_span, lobes, cap_start, cap_end, v_scale)
 
 static func mirror_x(arrays: Array) -> Array:
-	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var out_verts := PackedVector3Array()
-	out_verts.resize(verts.size())
-	for i in verts.size():
-		var p: Vector3 = verts[i]
-		out_verts[i] = Vector3(-p.x, p.y, p.z)
-	var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-	var out_idx := PackedInt32Array()
-	out_idx.resize(idx.size())
-	var tri_count := idx.size() / 3
-	for t in tri_count:
-		out_idx[t * 3 + 0] = idx[t * 3 + 0]
-		out_idx[t * 3 + 1] = idx[t * 3 + 2]   # flip winding
-		out_idx[t * 3 + 2] = idx[t * 3 + 1]
-	var out := arrays.duplicate()
-	out[Mesh.ARRAY_VERTEX] = out_verts
-	out[Mesh.ARRAY_INDEX] = out_idx
-	out[Mesh.ARRAY_NORMAL] = null
-	out[Mesh.ARRAY_TANGENT] = null
-	return MeshLib.recompute_normals(out)
+	return MeshLib.mirror_x(arrays)
 
 # ------------------------------------------------------------------ parts ----
 
@@ -414,12 +350,7 @@ static func foot() -> Array:
 	return a
 
 static func _empty() -> Array:
-	var out := []
-	out.resize(Mesh.ARRAY_MAX)
-	out[Mesh.ARRAY_VERTEX] = PackedVector3Array()
-	out[Mesh.ARRAY_INDEX] = PackedInt32Array()
-	out[Mesh.ARRAY_TEX_UV] = PackedVector2Array()
-	return out
+	return MeshLib.empty_arrays()
 
 # ------------------------------------------------------------------ build ----
 
@@ -485,11 +416,4 @@ static func build(cfg: Dictionary = {}) -> Dictionary:
 	}
 
 static func _translate(arrays: Array, delta: Vector3) -> Array:
-	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var moved := PackedVector3Array()
-	moved.resize(verts.size())
-	for i in verts.size():
-		moved[i] = verts[i] + delta
-	var out := arrays.duplicate()
-	out[Mesh.ARRAY_VERTEX] = moved
-	return out
+	return MeshLib.translate(arrays, delta)
