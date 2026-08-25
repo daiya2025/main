@@ -1,7 +1,7 @@
 # Godot 4
 .godot/
 /android/
-export_presets.cfg
+build/
 
 # Poly Haven downloads are fetched on demand by tools/fetch_polyhaven.py
 assets/polyhaven/textures/

@@ -228,6 +228,18 @@ xvfb-run -a godot --path . --rendering-driver opengl3 --script res://tests/captu
 `smoke_test.gd` は 12 本のシェーダのコンパイル、メッシュ演算子の不変条件、
 人体・モンスターの三角形数とスキンウェイトの正規化を検証します。
 
+### 8-1. Windows 向けビルド
+
+`export_presets.cfg` に **Windows Desktop** プリセットを同梱しています。
+
+```bash
+# エディタで一度エクスポートテンプレートを導入したうえで
+godot --headless --path . --export-release "Windows Desktop" build/DIGIHARIMAN.exe
+```
+
+`tests/` と `tools/` は除外され、S3TC/BPTC テクスチャ圧縮が有効になります。
+Poly Haven 素材を先に取得しておけば、そのまま .pck に同梱されます。
+
 ---
 
 ## 9. 現状の範囲
