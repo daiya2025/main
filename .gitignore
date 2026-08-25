@@ -1,0 +1,14 @@
+# Godot 4
+.godot/
+/android/
+export_presets.cfg
+
+# Poly Haven downloads are fetched on demand by tools/fetch_polyhaven.py
+assets/polyhaven/textures/
+assets/polyhaven/hdris/
+assets/polyhaven/models/
+assets/polyhaven/manifest.json
+assets/polyhaven/CREDITS.md
+
+# Generated mesh cache
+assets/generated/
