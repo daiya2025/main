@@ -12,3 +12,7 @@ assets/polyhaven/CREDITS.md
 
 # Generated mesh cache
 assets/generated/
+
+# scratch visual-check scripts, rewritten per capture run
+tests/t.gd
+tests/t.gd.uid
