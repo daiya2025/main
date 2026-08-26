@@ -87,6 +87,22 @@ python tools/fetch_polyhaven.py --res 4k
 リールが止まることはありません。任意のキー／クリックで
 即座に操作へ戻ります。`--demo --kiosk` で無限ループする展示モードになります。
 
+### デモを MP4 に録画する
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\record_demo.ps1 -Godot "C:\path\to\Godot_v4.4.1-stable_win64.exe"
+```
+
+Godot の **Movie Maker モード**で録画するため、実行速度に関係なく全フレーム・
+全サンプルが確実に収録されます（60fps 固定、実時間の数倍かかります）。
+ffmpeg が入っていれば H.264 の `digihariman_demo.mp4` に自動変換し、
+無ければ AVI (Motion JPEG) のまま残して変換コマンドを表示します。
+ffmpeg の導入は `winget install Gyan.FFmpeg`。
+解像度や fps は `-Width 3840 -Height 2160 -Fps 60` のように変更できます。
+Linux / CI 用に同等の `tools/record_demo.sh` もあります。
+録画モードではデモが自動開始し、リール終了と同時にアプリが終了して
+ファイルが閉じられます。
+
 ---
 
 ## 4. Poly Haven 自動取得パイプライン

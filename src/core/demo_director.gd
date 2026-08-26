@@ -145,6 +145,10 @@ func stop() -> void:
 	if not active:
 		return
 	active = false
+	if OS.has_feature("movie"):
+		# Recording run: the reel is over, so the movie is over.
+		_main.get_tree().quit()
+		return
 	Game.demo_mode = false
 	if _player != null and is_instance_valid(_player):
 		_player.bot_enabled = false

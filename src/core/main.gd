@@ -75,7 +75,15 @@ func _boot() -> void:
 	_ready_to_play = true
 	_wave_timer = 2.5
 	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
-	if args.has("--demo"):
+	if OS.has_feature("movie"):
+		# Movie Maker mode exists to record the reel: start it immediately
+		# (0.3 s for the loading fade — engine frames ARE video frames here,
+		# so the pause is three tenths of a second of footage, not of wall
+		# time) and never loop; the director quits the app at the outro so
+		# the file ends exactly with the reel.
+		get_tree().create_timer(0.3).timeout.connect(func() -> void:
+			demo.start(false))
+	elif args.has("--demo"):
 		# Let the loading card finish its fade before the reel starts, so the
 		# first establishing frame is clean.
 		get_tree().create_timer(1.5).timeout.connect(func() -> void:
