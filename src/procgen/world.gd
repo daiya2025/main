@@ -511,7 +511,7 @@ static func _street_props(rng: RandomNumberGenerator, stats: Dictionary) -> Node
 
 	# Real lights only on the lamps nearest the arena; the rest are emissive
 	# geometry, which SDFGI still picks up as bounce.
-	var lit_budget := int(clampf(18.0 * Quality.foliage_density() + 6.0, 6.0, 26.0))
+	var lit_budget := int(clampf(14.0 * Quality.foliage_density() + 4.0, 4.0, 18.0))
 	lit_positions.sort_custom(func(a: Vector3, b: Vector3) -> bool:
 		return a.length_squared() < b.length_squared())
 	for i in mini(lit_budget, lit_positions.size()):
@@ -521,7 +521,7 @@ static func _street_props(rng: RandomNumberGenerator, stats: Dictionary) -> Node
 		light.light_energy = 5.5
 		light.omni_range = 17.0
 		light.omni_attenuation = 1.6
-		light.shadow_enabled = i < 8
+		light.shadow_enabled = i < 4
 		light.light_volumetric_fog_energy = 2.0
 		node.add_child(light)
 		stats["lights"] = int(stats["lights"]) + 1

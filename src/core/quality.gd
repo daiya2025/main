@@ -10,17 +10,19 @@ enum Preset { ULTRA, HIGH, BALANCED, PERFORMANCE }
 const PRESETS := {
 	Preset.ULTRA: {
 		"name": "ULTRA",
-		"msaa": Viewport.MSAA_4X,
+		# TAA already resolves geometric edges; stacking MSAA 4x on top nearly
+		# doubles raster cost for a marginal gain. 2x covers thin silhouettes.
+		"msaa": Viewport.MSAA_2X,
 		"taa": true,
 		"scaling_mode": Viewport.SCALING_3D_MODE_BILINEAR,
 		"scaling": 1.0,
 		"sdfgi": true,
-		"sdfgi_cascades": 6,
+		"sdfgi_cascades": 5,
 		"sdfgi_half_res": false,
 		"ssao": true,
 		"ssil": true,
 		"ssr": true,
-		"ssr_steps": 96,
+		"ssr_steps": 64,
 		"volumetric_fog": true,
 		"fog_density": 0.028,
 		"glow": true,

@@ -142,7 +142,7 @@ free_cursor={
 [physics]
 
 3d/default_gravity=22.0
-common/physics_ticks_per_second=120
+common/physics_ticks_per_second=60
 common/max_physics_steps_per_frame=16
 
 [rendering]
@@ -152,7 +152,7 @@ textures/default_filters/anisotropic_filtering_level=4
 textures/default_filters/use_nearest_mipmap_filter=false
 lights_and_shadows/directional_shadow/size=8192
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=4
-lights_and_shadows/positional_shadow/atlas_size=8192
+lights_and_shadows/positional_shadow/atlas_size=4096
 lights_and_shadows/positional_shadow/soft_shadow_filter_quality=4
 lights_and_shadows/positional_shadow/atlas_16_bits=false
 global_illumination/gi/use_half_resolution=false
@@ -161,16 +161,16 @@ global_illumination/sdfgi/frames_to_converge=4
 global_illumination/sdfgi/frames_to_update_lights=2
 global_illumination/voxel_gi/quality=1
 environment/ssao/quality=4
-environment/ssao/half_size=false
+environment/ssao/half_size=true
 environment/ssil/quality=4
-environment/ssil/half_size=false
+environment/ssil/half_size=true
 environment/screen_space_reflection/roughness_quality=3
 environment/subsurface_scattering/subsurface_scattering_quality=3
 environment/subsurface_scattering/subsurface_scattering_scale=0.6
-environment/volumetric_fog/volume_size=192
-environment/volumetric_fog/volume_depth=256
+environment/volumetric_fog/volume_size=128
+environment/volumetric_fog/volume_depth=192
 environment/volumetric_fog/use_filter=1
-anti_aliasing/quality/msaa_3d=1
+anti_aliasing/quality/msaa_3d=0
 anti_aliasing/quality/screen_space_aa=0
 anti_aliasing/quality/use_taa=true
 anti_aliasing/quality/use_debanding=true

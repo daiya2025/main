@@ -119,6 +119,9 @@ func _physics_process(delta: float) -> void:
 		lock_on_target = null
 		if camera_rig != null:
 			camera_rig.lock_on_target = null
+	if Game.demo_mode and alive:
+		# quiet recovery so a long kiosk loop doesn't sit at 1 HP forever
+		health = minf(MAX_HEALTH, health + 4.0 * delta)
 	if not alive:
 		velocity = velocity.move_toward(Vector3.ZERO, 30.0 * delta)
 		move_and_slide()
@@ -370,6 +373,10 @@ func _resolve_hit(step: Dictionary) -> void:
 func take_damage(amount: float, from_position: Vector3, _direction: Vector3, _crit: bool) -> void:
 	if not alive or _invulnerable > 0.0:
 		return
+	# The attract mode must never end on the death screen: hits still land and
+	# read (flash, knockback, meter drop) but can never be lethal.
+	if Game.demo_mode:
+		amount = minf(amount, maxf(health - 1.0, 0.0))
 	health = maxf(0.0, health - amount)
 	_hurt_time = 0.35
 	_invulnerable = 0.45

@@ -442,6 +442,15 @@ func _run_combat_checks() -> void:
 	player.call("heal", 999.0)
 	_check(float(player.get("health")) == _player_max_health, "heal clamps to max")
 
+	# --- demo immortality ---------------------------------------------------
+	_game.set("demo_mode", true)
+	player.set("_invulnerable", 0.0)
+	player.call("take_damage", 99999.0, player.global_position + Vector3(0, 1, 2), Vector3.BACK, true)
+	_check(float(player.get("health")) >= 1.0 and bool(player.get("alive")),
+		"demo mode caps damage below lethal")
+	_game.set("demo_mode", false)
+	player.call("heal", 999.0)
+
 	# --- lethal damage ------------------------------------------------------
 	monster.call("take_damage", 9999.0, monster.global_position + Vector3(0, 1, 1), Vector3.FORWARD, true)
 	_check(not bool(monster.call("is_alive")), "lethal damage kills")

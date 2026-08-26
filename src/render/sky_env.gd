@@ -108,7 +108,7 @@ func _build_environment(mood: String) -> Environment:
 	# --- global illumination ----------------------------------------------
 	env.sdfgi_enabled = true
 	env.sdfgi_use_occlusion = true
-	env.sdfgi_cascades = 6
+	env.sdfgi_cascades = 5
 	env.sdfgi_min_cell_size = 0.15
 	env.sdfgi_bounce_feedback = 0.6
 	env.sdfgi_energy = 1.1
@@ -131,7 +131,7 @@ func _build_environment(mood: String) -> Environment:
 	env.ssil_normal_rejection = 1.0
 
 	env.ssr_enabled = true
-	env.ssr_max_steps = 96
+	env.ssr_max_steps = 64
 	env.ssr_fade_in = 0.15
 	env.ssr_fade_out = 2.4
 	env.ssr_depth_tolerance = 0.24
