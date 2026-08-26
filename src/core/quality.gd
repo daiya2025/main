@@ -157,7 +157,12 @@ func _apply_to_nodes() -> void:
 		vp.scaling_3d_scale = config["scaling"]
 		vp.fsr_sharpness = 0.25
 		vp.use_debanding = true
-		vp.anisotropic_filtering_level = Viewport.ANISOTROPY_16X
+		# Per-viewport anisotropic filtering is a Godot 4.4 API; the enum
+		# constant would even fail to PARSE on 4.3, so probe by name and set
+		# the raw value (4 = ANISOTROPY_16X). On 4.3 the project-wide setting
+		# still applies.
+		if "anisotropic_filtering_level" in vp:
+			vp.set("anisotropic_filtering_level", 4)
 	if is_instance_valid(_environment):
 		var env := _environment
 		env.sdfgi_enabled = config["sdfgi"]
