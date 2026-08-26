@@ -23,10 +23,10 @@ uniform float pore_strength : hint_range(0.0, 3.0) = 0.85;
 uniform float micro_roughness : hint_range(0.0, 1.0) = 0.055;
 
 group_uniforms Specular;
-uniform float roughness_base : hint_range(0.0, 1.0) = 0.42;
+uniform float roughness_base : hint_range(0.0, 1.0) = 0.52;
 uniform float roughness_variation : hint_range(0.0, 1.0) = 0.22;
-uniform float specular_level : hint_range(0.0, 1.0) = 0.45;
-uniform float sheen_strength : hint_range(0.0, 2.0) = 0.55;
+uniform float specular_level : hint_range(0.0, 1.0) = 0.30;
+uniform float sheen_strength : hint_range(0.0, 2.0) = 0.16;
 
 group_uniforms Subsurface;
 uniform float sss_strength : hint_range(0.0, 1.0) = 0.62;
@@ -74,9 +74,11 @@ void fragment() {
 	METALLIC = 0.0;
 
 	// Peach fuzz: a tight forward-scattering rim that shows up on silhouettes.
+	// Peach fuzz: a tight, mostly-albedo-tinted rim. Kept subtle — an untinted
+	// rim under several lights stacks to pure white and reads as plastic.
 	float fresnel = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0);
 	RIM = sheen_strength * fresnel;
-	RIM_TINT = 0.35;
+	RIM_TINT = 0.85;
 
 	// --- subsurface -------------------------------------------------------
 	SSS_STRENGTH = sss_strength * mix(0.7, 1.0, v_cavity);

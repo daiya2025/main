@@ -77,6 +77,10 @@ func bone(name: String) -> int:
 func update(delta: float) -> void:
 	if skeleton == null:
 		return
+	# The spring integrators explode on the multi-second deltas a loading hitch
+	# (or a software rasteriser) can produce — one bad step throws the pelvis
+	# kilometres away. Clamping costs nothing at normal frame rates.
+	delta = clampf(delta, 0.0001, 1.0 / 20.0)
 	if not _bones_cached:
 		_cache_bones()
 	PoseKit.reset(skeleton)

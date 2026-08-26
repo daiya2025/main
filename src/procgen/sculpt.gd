@@ -152,6 +152,29 @@ static func flatten_below(arrays: Array, y: float, blend: float = 0.06) -> Array
 	out[Mesh.ARRAY_NORMAL] = null
 	return MeshLib.recompute_normals(out)
 
+## Deletes every triangle whose centroid falls inside an ellipsoid — the only
+## reliable way to cut an opening (a face hole, a vent) into a closed shell.
+## Carving with negative blobs merely dents the surface; it never opens it.
+static func remove_region(arrays: Array, center: Vector3, radii: Vector3) -> Array:
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var kept := PackedInt32Array()
+	var tris := idx.size() / 3
+	for t in tris:
+		var centroid := (verts[idx[t * 3]] + verts[idx[t * 3 + 1]] + verts[idx[t * 3 + 2]]) / 3.0
+		var d := Vector3(
+			(centroid.x - center.x) / maxf(radii.x, 0.0001),
+			(centroid.y - center.y) / maxf(radii.y, 0.0001),
+			(centroid.z - center.z) / maxf(radii.z, 0.0001))
+		if d.length_squared() < 1.0:
+			continue
+		kept.append_array([idx[t * 3], idx[t * 3 + 1], idx[t * 3 + 2]])
+	var out := arrays.duplicate()
+	out[Mesh.ARRAY_INDEX] = kept
+	out[Mesh.ARRAY_NORMAL] = null
+	out[Mesh.ARRAY_TANGENT] = null
+	return MeshLib.recompute_normals(out)
+
 ## A UV sphere with poles on +Y/-Y, the starting point for heads and eyes.
 static func uv_sphere(radius: Vector3, rings: int, segments: int) -> Array:
 	var st := SurfaceTool.new()

@@ -77,6 +77,9 @@ func bone(name: String) -> int:
 func update(delta: float) -> void:
 	if skeleton == null:
 		return
+	# Same guard as HumanoidAnimator: spring integrators diverge on the huge
+	# deltas of a frame hitch.
+	delta = clampf(delta, 0.0001, 1.0 / 20.0)
 	if not _bones_cached:
 		_cache_bones()
 	PoseKit.reset(skeleton)

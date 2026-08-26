@@ -14,7 +14,9 @@ uniform float pupil_radius : hint_range(0.01, 0.4) = 0.052;
 uniform float limbal_width : hint_range(0.0, 0.1) = 0.022;
 uniform float fiber_density : hint_range(4.0, 120.0) = 54.0;
 
-const vec2 EYE_FORWARD_UV = vec2(0.25, 0.5);
+// project_uv_spherical maps +Z (the gaze direction) to u = 0.75:
+// u = atan2(z, x) / TAU + 0.5, and atan2(1, 0) = +PI/2.
+const vec2 EYE_FORWARD_UV = vec2(0.75, 0.5);
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);

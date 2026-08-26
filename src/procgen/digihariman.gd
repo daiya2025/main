@@ -161,9 +161,14 @@ static func helmet(b: float) -> Array:
 	var shell := Sculpt.uv_sphere(Vector3(0.089 * b, 0.110 * b, 0.113 * b), 30, 40)
 	shell = Sculpt.project_uv_spherical(shell, Vector3.ZERO)
 	var a := Sculpt.merge(Humanoid._empty(), shell, Transform3D(Basis(), center + Vector3(0, 0.006, -0.004)))
-	# cut the face opening by pulling the front-lower shell back into the skull
-	a = Sculpt.blob(a, center + Vector3(0, -0.030, 0.105), Vector3(0.085, 0.085, 0.070), -0.055, Vector3.ZERO, 0.9)
-	a = Sculpt.blob(a, center + Vector3(0, -0.090, 0.020), Vector3(0.100, 0.055, 0.130), -0.045, Vector3.ZERO, 0.9)
+	# Cut the face opening and the neck hole out of the shell. These must be
+	# real holes — a negative blob only dents a closed surface, which is how an
+	# earlier revision ended up with the sculpted face sealed inside the helmet.
+	a = Sculpt.remove_region(a, center + Vector3(0, -0.012, 0.112), Vector3(0.068, 0.082, 0.052))
+	a = Sculpt.remove_region(a, center + Vector3(0, -0.118, 0.005), Vector3(0.062, 0.045, 0.070))
+	# Roll the cut edge slightly inward so it reads as a rimmed opening rather
+	# than a paper-thin shell.
+	a = Sculpt.blob(a, center + Vector3(0, -0.010, 0.100), Vector3(0.075, 0.090, 0.045), -0.006, Vector3.ZERO, 1.4)
 	# crest and ear guards
 	a = Sculpt.blob(a, center + Vector3(0, 0.098, -0.010), Vector3(0.022, 0.045, 0.120), 0.018, Vector3(0, 1, 0), 1.3)
 	a = Sculpt.blob(a, center + Vector3(0.086, -0.012, -0.020), Vector3(0.035, 0.055, 0.055), 0.014, Vector3(1, 0, 0), 1.2, true)
@@ -174,17 +179,19 @@ static func helmet(b: float) -> Array:
 static func visor() -> Array:
 	# A thin emissive band across the brow, sitting just proud of the helmet.
 	var center := Humanoid.HEAD_CENTER
-	var band := Sculpt.uv_sphere(Vector3(0.092, 0.020, 0.106), 14, 34)
+	var band := Sculpt.uv_sphere(Vector3(0.084, 0.016, 0.070), 14, 34)
 	band = Sculpt.project_uv_spherical(band, Vector3.ZERO)
-	var a := Sculpt.merge(Humanoid._empty(), band, Transform3D(Basis(), center + Vector3(0, 0.044, 0.004)))
-	a = Sculpt.blob(a, center + Vector3(0, 0.044, -0.090), Vector3(0.090, 0.045, 0.070), -0.030, Vector3.ZERO, 0.9)
+	# Sits across the brow, just proud of the helmet's face opening.
+	var a := Sculpt.merge(Humanoid._empty(), band, Transform3D(Basis(), center + Vector3(0, 0.052, 0.052)))
+	a = Sculpt.remove_region(a, center + Vector3(0, 0.052, -0.045), Vector3(0.11, 0.05, 0.075))
 	return a
 
 static func chest_emblem() -> Array:
 	# The DIGIHARI core: a glowing lens set into the sternum.
 	var lens := Sculpt.uv_sphere(Vector3(0.052, 0.052, 0.030), 16, 26)
 	lens = Sculpt.project_uv_spherical(lens, Vector3.ZERO)
-	return Sculpt.merge(Humanoid._empty(), lens, Transform3D(Basis(), Vector3(0, 1.305, 0.152)))
+	# Proud of the chest plate (which reaches ~z 0.16 over the sternum ridge).
+	return Sculpt.merge(Humanoid._empty(), lens, Transform3D(Basis(), Vector3(0, 1.300, 0.172)))
 
 # ------------------------------------------------------------------- build --
 

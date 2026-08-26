@@ -110,6 +110,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_auto_align_delay = 1.6
 
 func _process(delta: float) -> void:
+	# The impulse/FOV springs diverge on hitch-length deltas; clamp like the
+	# animators do.
+	delta = clampf(delta, 0.0001, 1.0 / 20.0)
 	if photo_mode:
 		_process_photo(delta)
 		return

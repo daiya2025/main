@@ -57,9 +57,11 @@ func _initialize() -> void:
 
 	var camera := Camera3D.new()
 	camera.fov = 40.0
-	camera.position = Vector3(1.15, 1.35, 2.55)
-	camera.look_at_from_position(camera.position, Vector3(0, 1.05, 0), Vector3.UP)
 	camera.current = true
+	# look_at needs a node inside an active tree, which _initialize predates —
+	# build the aim transform directly instead.
+	camera.transform = Transform3D.IDENTITY.looking_at(
+		Vector3(0, 1.05, 0) - Vector3(1.15, 1.35, 2.55)).translated(Vector3(1.15, 1.35, 2.55))
 	world.add_child(camera)
 
 func _process(delta: float) -> bool:
@@ -68,6 +70,14 @@ func _process(delta: float) -> bool:
 		animator.update(delta)
 	if frames < WARMUP:
 		return false
+	var camera := root.get_camera_3d()
+	if camera != null:
+		print("  cam pos=%s fwd=%s hero_screen=%s" % [
+			camera.global_position.snapped(Vector3.ONE * 0.01),
+			(-camera.global_transform.basis.z).snapped(Vector3.ONE * 0.01),
+			camera.unproject_position(Vector3(0, 1.05, 0)).snapped(Vector2.ONE)])
+	else:
+		print("  NO CURRENT CAMERA")
 	var image := root.get_texture().get_image()
 	image.save_png("user://portrait.png")
 	print("portrait saved: %s (%dx%d)" % [
