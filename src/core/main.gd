@@ -76,7 +76,10 @@ func _boot() -> void:
 	_wave_timer = 2.5
 	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
 	if args.has("--demo"):
-		demo.start(args.has("--kiosk"))
+		# Let the loading card finish its fade before the reel starts, so the
+		# first establishing frame is clean.
+		get_tree().create_timer(1.5).timeout.connect(func() -> void:
+			demo.start(args.has("--kiosk")))
 
 func _process(delta: float) -> void:
 	if not _ready_to_play:
