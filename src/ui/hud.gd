@@ -57,7 +57,9 @@ func _ready() -> void:
 	_numbers = Node2D.new()
 	_numbers.name = "DamageNumbers"
 	add_child(_numbers)
+	_build_death_overlay()
 
+	Signals.player_died.connect(_show_death_overlay)
 	Signals.player_health_changed.connect(func(c: float, m: float) -> void:
 		if c < _health_ratio * m:
 			_hit_flash = 1.0
@@ -202,6 +204,47 @@ func _build_loading() -> void:
 
 	_loading.add_child(box)
 	add_child(_loading)
+
+var _death: Control = null
+
+func _build_death_overlay() -> void:
+	_death = ColorRect.new()
+	_death.name = "DeathOverlay"
+	(_death as ColorRect).color = Color(0.10, 0.01, 0.0, 0.0)
+	_death.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_death.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_CENTER)
+	box.position = Vector2(-260, -50)
+	box.custom_minimum_size = Vector2(520, 100)
+	box.add_theme_constant_override("separation", 10)
+	var title := Label.new()
+	title.add_theme_font_override("font", font)
+	title.add_theme_font_size_override("font_size", 44)
+	title.add_theme_color_override("font_color", Color(1.0, 0.30, 0.10))
+	title.text = "機能停止"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+	var hint := Label.new()
+	hint.add_theme_font_override("font", font)
+	hint.add_theme_font_size_override("font_size", 18)
+	hint.add_theme_color_override("font_color", WHITE)
+	hint.text = "R キーで再起動"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(hint)
+	_death.add_child(box)
+	_death.hide()
+	add_child(_death)
+
+func _show_death_overlay() -> void:
+	if _death == null:
+		return
+	_death.modulate.a = 0.0
+	_death.show()
+	var tween := create_tween()
+	tween.tween_interval(0.6)
+	tween.tween_property(_death, "modulate:a", 1.0, 1.2)
+	tween.parallel().tween_property(_death, "color", Color(0.10, 0.01, 0.0, 0.55), 1.2)
 
 func _on_build_progress(stage: String, ratio: float) -> void:
 	const LABELS := {
