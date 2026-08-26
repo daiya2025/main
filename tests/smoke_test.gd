@@ -20,12 +20,25 @@ func _initialize() -> void:
 ## and SceneTree.root is not active during _initialize — so the animation
 ## checks run on the first processed frame instead.
 func _process(_delta: float) -> bool:
-	if _stage == 0:
-		_stage = 1
-		_test_animation()
-		_report()
-		return true
+	match _stage:
+		0:
+			_stage = 1
+			_test_animation()
+			_setup_combat()
+		1:
+			# Let physics settle the spawned bodies (and the monster's SPAWN
+			# state finish) before asserting on them.
+			_combat_frames += 1
+			if _combat_frames >= 40:
+				_stage = 2
+		2:
+			_stage = 3
+			_run_combat_checks()
+			_report()
+			return true
 	return false
+
+var _combat_stage_padding := 0
 
 func _check(condition: bool, label: String) -> void:
 	if condition:
@@ -352,3 +365,87 @@ func _test_audio() -> void:
 	_check(wind.loop_mode == AudioStreamWAV.LOOP_FORWARD, "ambient loops marked as loops")
 	var again := SoundBank.get_stream("impact")
 	_check(again == SoundBank.get_stream("impact"), "clip cache returns the same stream")
+
+## Autoload identifiers are not resolvable when this script is compiled via
+## --script (it parses before the autoloads register), so they are fetched by
+## node path at runtime instead.
+var _game: Node = null
+var _signals: Node = null
+
+var _combat_frames: int = 0
+# Loaded at runtime: a global class whose script references autoloads cannot be
+# resolved by name from a --script file (this file parses before the autoloads
+# register, which poisons those class bindings with a failed compile).
+var _combat_player: CharacterBody3D = null
+var _combat_monster: CharacterBody3D = null
+var _player_max_health: float = 0.0
+var _died_events: Array = []
+var _damaged_events: Array = []
+
+func _setup_combat() -> void:
+	print("-- Combat logic")
+	_game = root.get_node("/root/Game")
+	_signals = root.get_node("/root/Signals")
+	var arena := Node3D.new()
+	root.add_child(arena)
+	var floor_body := StaticBody3D.new()
+	floor_body.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(60, 1, 60)
+	shape.shape = box
+	shape.position = Vector3(0, -0.5, 0)
+	floor_body.add_child(shape)
+	arena.add_child(floor_body)
+
+	var player_script: GDScript = load("res://src/player/player.gd")
+	_player_max_health = float(player_script.get_script_constant_map()["MAX_HEALTH"])
+	_combat_player = player_script.new()
+	arena.add_child(_combat_player)
+	_combat_player.global_position = Vector3(0, 0.2, 0)
+
+	var agent_script: GDScript = load("res://src/ai/monster_agent.gd")
+	_combat_monster = agent_script.new()
+	_combat_monster.call("setup", Monster.Kind.SWARMER)
+	_combat_monster.set("target", _combat_player)
+	arena.add_child(_combat_monster)
+	_combat_monster.global_position = Vector3(0, 0.2, -30.0)
+
+	_game.set("enemies_alive", 1)
+	_signals.connect("enemy_died", func(enemy: Node3D, pos: Vector3) -> void: _died_events.append([enemy, pos]))
+	_signals.connect("enemy_damaged", func(enemy: Node3D, amount: float, crit: bool, _pos: Vector3) -> void:
+		_damaged_events.append([enemy, amount, crit]))
+
+func _run_combat_checks() -> void:
+	var monster := _combat_monster
+	var player := _combat_player
+	_check(monster != null and player != null, "combat actors constructed")
+	if monster == null or player == null:
+		return
+	_check(bool(monster.call("is_alive")), "monster alive after spawn settling")
+	_check(monster.is_in_group("enemy"), "monster registered in enemy group")
+	_check(float(player.get("health")) == _player_max_health, "player at full health")
+
+	# --- damage pipeline ---------------------------------------------------
+	var before := float(monster.get("health"))
+	monster.call("take_damage", 30.0, monster.global_position + Vector3(0, 1, 1), Vector3.FORWARD, false)
+	_check(float(monster.get("health")) == before - 30.0, "damage subtracts health")
+	_check(_damaged_events.size() == 1 and float(_damaged_events[0][1]) == 30.0, "enemy_damaged signal carries the amount")
+
+	# --- player i-frames ---------------------------------------------------
+	player.call("take_damage", 20.0, player.global_position + Vector3(0, 1, 2), Vector3.BACK, false)
+	var after_first := float(player.get("health"))
+	player.call("take_damage", 20.0, player.global_position + Vector3(0, 1, 2), Vector3.BACK, false)
+	_check(after_first == _player_max_health - 20.0, "player takes the first hit")
+	_check(float(player.get("health")) == after_first, "invulnerability window blocks the immediate second hit")
+	player.call("heal", 999.0)
+	_check(float(player.get("health")) == _player_max_health, "heal clamps to max")
+
+	# --- lethal damage ------------------------------------------------------
+	monster.call("take_damage", 9999.0, monster.global_position + Vector3(0, 1, 1), Vector3.FORWARD, true)
+	_check(not bool(monster.call("is_alive")), "lethal damage kills")
+	_check(_died_events.size() == 1, "enemy_died emitted exactly once")
+	_check(int(_game.get("enemies_alive")) == 0, "wave counter decremented")
+	_check(int(_game.get("score")) > 0, "score awarded on kill")
+	monster.call("take_damage", 10.0, monster.global_position, Vector3.FORWARD, false)
+	_check(_died_events.size() == 1, "corpse takes no further death events")
