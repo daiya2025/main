@@ -33,15 +33,16 @@ void vertex() {
 }
 
 void fragment() {
-	// window grid in metres on the box's own faces
+	// Window grid in metres on the box's own faces. Face selection must come
+	// from the local position, not NORMAL — fragment NORMAL is view-space.
 	vec3 world_size = v_scale;
 	vec2 face_uv;
-	if (abs(NORMAL.y) > 0.5) {
+	vec3 a = abs(v_local);
+	if (a.y > a.x && a.y > a.z) {
 		face_uv = vec2(-1.0);               // roof: no windows
 	} else {
-		// pick the horizontal coordinate that runs along this face
-		float along = (abs(dot(normalize(NORMAL), vec3(0.0, 0.0, 1.0))) > 0.5)
-			? v_local.x * world_size.x : v_local.z * world_size.z;
+		// the coordinate that runs along this face is the non-dominant one
+		float along = (a.z > a.x) ? v_local.x * world_size.x : v_local.z * world_size.z;
 		face_uv = vec2(along / 6.0, v_local.y * world_size.y / 3.4);
 	}
 

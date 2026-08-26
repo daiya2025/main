@@ -160,13 +160,13 @@ func _build_environment(mood: String) -> Environment:
 	env.fog_sky_affect = 0.4
 	env.fog_height = -6.0
 	env.fog_height_density = 0.06
-	env.fog_aerial_perspective = 0.55
+	env.fog_aerial_perspective = 0.7
 
 	# --- glow --------------------------------------------------------------
 	env.glow_enabled = true
 	env.glow_intensity = 0.62
 	env.glow_strength = 1.0
-	env.glow_bloom = 0.06
+	env.glow_bloom = 0.09
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
 	env.glow_hdr_threshold = 1.05
 	env.glow_hdr_scale = 2.0
