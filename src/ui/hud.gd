@@ -443,13 +443,13 @@ func _draw_meter(rect: Rect2, value: float, lag: float, color: Color, label: Str
 
 func _draw_center() -> void:
 	var c := _center.size * 0.5
-	var player := Game.player as Player
-	var locked := player != null and is_instance_valid(player) and player.lock_on_target != null
+	var player := Game.alive_player() as Player
+	var target: Node3D = player.lock_on_target if player != null else null
+	var locked := target != null and is_instance_valid(target)
 
 	if locked:
 		var camera := get_viewport().get_camera_3d()
-		var target: Node3D = player.lock_on_target
-		if camera != null and is_instance_valid(target) and not camera.is_position_behind(target.global_position):
+		if camera != null and not camera.is_position_behind(target.global_position):
 			var screen := camera.unproject_position(target.global_position + Vector3.UP)
 			var r := 22.0 + sin(Time.get_ticks_msec() * 0.004) * 2.5
 			# Four corner brackets rather than a full box: less occlusion.

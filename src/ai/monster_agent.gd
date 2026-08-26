@@ -96,7 +96,7 @@ func is_alive() -> bool:
 func _physics_process(delta: float) -> void:
 	_state_time += delta
 	if target == null or not is_instance_valid(target):
-		target = Game.player
+		target = Game.alive_player()
 
 	if not is_on_floor():
 		velocity.y -= ProjectSettings.get_setting("physics/3d/default_gravity", 22.0) * delta

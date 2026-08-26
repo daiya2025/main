@@ -451,6 +451,19 @@ func _run_combat_checks() -> void:
 	monster.call("take_damage", 10.0, monster.global_position, Vector3.FORWARD, false)
 	_check(_died_events.size() == 1, "corpse takes no further death events")
 
+	# --- freed-reference hygiene -------------------------------------------
+	# A restart frees the whole scene while the Game autoload survives; every
+	# consumer must see null, not a dangling pointer (casting one trips the
+	# debugger and freezes the game — observed live on hud.gd's reticle draw).
+	player.set("lock_on_target", monster)
+	monster.free()
+	player.call("_physics_process", 1.0 / 120.0)
+	_check(player.get("lock_on_target") == null, "freed lock-on target is dropped")
+	_combat_monster = null
+	player.free()
+	_combat_player = null
+	_check(_game.call("alive_player") == null, "alive_player() nulls after the player is freed")
+
 func _test_demo_reel() -> void:
 	print("-- Demo reel")
 	var main_stub := Node3D.new()

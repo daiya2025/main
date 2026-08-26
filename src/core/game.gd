@@ -15,6 +15,15 @@ const COMBO_WINDOW := 2.6
 var _hit_stop_remaining: float = 0.0
 var _base_time_scale: float = 1.0
 
+## The player reference outlives scene reloads (this is an autoload), so it
+## can dangle for the whole world rebuild after a restart. Every consumer goes
+## through this accessor; casting a freed object trips the debugger.
+func alive_player() -> Node3D:
+	if player != null and is_instance_valid(player):
+		return player
+	player = null
+	return null
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Signals.hit_stop_requested.connect(_on_hit_stop)
@@ -50,6 +59,7 @@ func _on_enemy_died(_enemy: Node3D, _pos: Vector3) -> void:
 	Signals.wave_changed.emit(wave_index, enemies_alive)
 
 func reset() -> void:
+	player = null
 	score = 0
 	combo = 0
 	wave_index = 0

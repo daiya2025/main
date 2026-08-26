@@ -110,7 +110,15 @@ func _ready() -> void:
 
 # ---------------------------------------------------------------------------
 
+func _exit_tree() -> void:
+	if Game.player == self:
+		Game.player = null
+
 func _physics_process(delta: float) -> void:
+	if lock_on_target != null and not is_instance_valid(lock_on_target):
+		lock_on_target = null
+		if camera_rig != null:
+			camera_rig.lock_on_target = null
 	if not alive:
 		velocity = velocity.move_toward(Vector3.ZERO, 30.0 * delta)
 		move_and_slide()
