@@ -13,9 +13,21 @@ PROJECT="$(cd "$(dirname "$0")/.." && pwd)"
 AVI="$PROJECT/$OUT.avi"
 MP4="$PROJECT/$OUT.mp4"
 
+# The movie writer captures the project's base viewport, which --resolution
+# cannot change — override.cfg (read by Godot at startup) is the supported way.
+W="${RES%x*}"; H="${RES#*x}"
+OVERRIDE="$PROJECT/override.cfg"
+trap 'rm -f "$OVERRIDE"' EXIT
+cat > "$OVERRIDE" <<CFG
+[display]
+
+window/size/viewport_width=$W
+window/size/viewport_height=$H
+window/size/mode=0
+CFG
+
 echo "Recording via Movie Maker mode ($RES @ ${FPS}fps)..."
-"$GODOT" --path "$PROJECT" --write-movie "$AVI" --fixed-fps "$FPS" \
-    --resolution "$RES" -- --demo
+"$GODOT" --path "$PROJECT" --write-movie "$AVI" --fixed-fps "$FPS" -- --demo
 [ -f "$AVI" ] || { echo "recording was not produced: $AVI" >&2; exit 1; }
 
 if ! command -v ffmpeg >/dev/null 2>&1; then

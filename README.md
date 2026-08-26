@@ -98,7 +98,9 @@ Godot の **Movie Maker モード**で録画するため、実行速度に関係
 ffmpeg が入っていれば H.264 の `digihariman_demo.mp4` に自動変換し、
 無ければ AVI (Motion JPEG) のまま残して変換コマンドを表示します。
 ffmpeg の導入は `winget install Gyan.FFmpeg`。
-解像度や fps は `-Width 3840 -Height 2160 -Fps 60` のように変更できます。
+解像度や fps は `-Width 3840 -Height 2160 -Fps 60` のように変更できます
+（ムービーライタはプロジェクト基準解像度で撮るため、スクリプトが
+`override.cfg` を一時生成して確実に反映し、終了後に削除します）。
 Linux / CI 用に同等の `tools/record_demo.sh` もあります。
 録画モードではデモが自動開始し、リール終了と同時にアプリが終了して
 ファイルが閉じられます。

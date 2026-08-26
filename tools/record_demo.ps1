@@ -29,10 +29,24 @@ if (-not (Get-Command $Godot -ErrorAction SilentlyContinue)) {
     Write-Error "Godot が見つかりません。-Godot で exe のパスを指定してください。"
 }
 
-Write-Host "Movie Maker モードで録画中... (${Width}x${Height} @ ${Fps}fps / 実時間の数倍かかります)"
-& $Godot --path $project --write-movie $avi --fixed-fps $Fps `
-    --resolution "${Width}x${Height}" -- --demo
-if ($LASTEXITCODE -ne 0) { Write-Error "Godot の録画が失敗しました (exit $LASTEXITCODE)" }
+# The movie writer captures the project's base viewport, which --resolution
+# cannot change — override.cfg (read by Godot at startup) is the supported way.
+$override = Join-Path $project "override.cfg"
+@"
+[display]
+
+window/size/viewport_width=$Width
+window/size/viewport_height=$Height
+window/size/mode=0
+"@ | Set-Content -Encoding ASCII $override
+
+try {
+    Write-Host "Movie Maker モードで録画中... (${Width}x${Height} @ ${Fps}fps / 実時間の数倍かかります)"
+    & $Godot --path $project --write-movie $avi --fixed-fps $Fps -- --demo
+    if ($LASTEXITCODE -ne 0) { Write-Error "Godot の録画が失敗しました (exit $LASTEXITCODE)" }
+} finally {
+    Remove-Item -ErrorAction SilentlyContinue $override
+}
 if (-not (Test-Path $avi)) { Write-Error "録画ファイルが生成されませんでした: $avi" }
 
 $ffmpeg = Get-Command ffmpeg -ErrorAction SilentlyContinue

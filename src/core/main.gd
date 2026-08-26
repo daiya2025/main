@@ -81,6 +81,9 @@ func _boot() -> void:
 		# so the pause is three tenths of a second of footage, not of wall
 		# time) and never loop; the director quits the app at the outro so
 		# the file ends exactly with the reel.
+		# (Recording resolution is set by the scripts via override.cfg — the
+		# movie writer locks its size before any script runs, so neither
+		# --resolution nor a runtime viewport resize can change it.)
 		get_tree().create_timer(0.3).timeout.connect(func() -> void:
 			demo.start(false))
 	elif args.has("--demo"):
