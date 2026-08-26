@@ -37,6 +37,10 @@ static func chest_plate(b: float) -> Array:
 	a = Sculpt.blob(a, Vector3(0.082, 1.318, 0.126), Vector3(0.080, 0.070, 0.060), 0.014, Vector3(0, 0, 1), 1.1, true)
 	a = Sculpt.crease(a, Vector3(0, 1.318, 0.150), Vector3(1, 0, 0), 0.012, 0.008,
 		Vector3(0, 1.310, 0.140), Vector3(0.026, 0.080, 0.070))
+	# V-ridge sweeping from the shoulders to the emblem: the "hero chest" line
+	for side in [1.0, -1.0]:
+		a = Sculpt.crease(a, Vector3(side * 0.075, 1.365, 0.135), Vector3(1, side * 0.85, 0).normalized(), 0.010, 0.007,
+			Vector3(side * 0.075, 1.360, 0.130), Vector3(0.075, 0.055, 0.055))
 	# collar ring and back vent
 	a = Sculpt.blob(a, Vector3(0, 1.424, 0.030), Vector3(0.120, 0.030, 0.110), 0.010, Vector3(0, 1, 0), 1.2)
 	a = Sculpt.blob(a, Vector3(0, 1.300, -0.140), Vector3(0.090, 0.080, 0.040), -0.008, Vector3.ZERO, 1.3)
@@ -174,6 +178,17 @@ static func helmet(b: float) -> Array:
 	a = Sculpt.blob(a, center + Vector3(0.086, -0.012, -0.020), Vector3(0.035, 0.055, 0.055), 0.014, Vector3(1, 0, 0), 1.2, true)
 	# nape plate
 	a = Sculpt.blob(a, center + Vector3(0, -0.070, -0.090), Vector3(0.075, 0.055, 0.055), 0.014, Vector3(0, -0.4, -1).normalized(), 1.1)
+	# swept side fins — the angular ear-blades that give the head its profile
+	for side in [1.0, -1.0]:
+		var fin := MeshLib.tube(
+			PackedVector3Array([
+				center + Vector3(side * 0.082, 0.012, -0.010),
+				center + Vector3(side * 0.112, 0.052, -0.070),
+				center + Vector3(side * 0.128, 0.088, -0.128),
+			]),
+			[[0.0, 0.030, 0.012, 1.8], [0.55, 0.020, 0.008, 1.7], [1.0, 0.003, 0.002, 1.8]],
+			10, 5, PackedFloat32Array(), true, true, 2.0)
+		a = Sculpt.merge(a, fin)
 	return a
 
 static func visor() -> Array:
@@ -202,6 +217,75 @@ static func thrusters() -> Array:
 		lens = Sculpt.project_uv_spherical(lens, Vector3.ZERO)
 		a = Sculpt.merge(a, lens, Transform3D(Basis(), Vector3(side * 0.105, 1.255, -0.248)))
 	return a
+
+# ------------------------------------------------------------------ weapon --
+
+## The BLADE: a single-edged energy katana. Hilt and guard are dark armour;
+## the edge is a long, thin energy loft that tapers to a point. Rigid meshes,
+## attached to the right hand bone at runtime — the attack poses swing the arm,
+## so the sword inherits every wind-up and follow-through for free.
+static func build_weapon_meshes() -> Dictionary:
+	# grip runs along -Y (continuing the arm line when held)
+	var hilt := MeshLib.tube(
+		PackedVector3Array([Vector3(0, 0.06, 0), Vector3(0, -0.02, 0), Vector3(0, -0.13, 0), Vector3(0, -0.17, 0)]),
+		[[0.0, 0.020, 0.020, 2.8], [0.3, 0.016, 0.016, 2.6], [0.85, 0.017, 0.017, 2.6], [1.0, 0.022, 0.022, 2.8]],
+		12, 4, PackedFloat32Array(), true, true, 3.0)
+	# angular guard plate
+	var guard := Sculpt.rounded_box(Vector3(0.085, 0.016, 0.052), 0.006, 2)
+	guard = Sculpt.project_uv_spherical(guard, Vector3.ZERO)
+	hilt = Sculpt.merge(hilt, guard, Transform3D(Basis(), Vector3(0, 0.065, 0.004)))
+	hilt = MeshLib.bake_cavity(hilt, 0.8, 0.02)
+	hilt = MeshLib.with_tangents(hilt)
+
+	# blade: flat lobed section, gentle back-curve, hard taper to the point
+	var spine := PackedVector3Array([
+		Vector3(0, 0.085, 0.006),
+		Vector3(0, 0.36, 0.012),
+		Vector3(0, 0.66, 0.004),
+		Vector3(0, 0.90, -0.012),
+	])
+	var blade := MeshLib.tube(spine,
+		[[0.00, 0.012, 0.038, 1.7],
+		 [0.30, 0.010, 0.044, 1.6],
+		 [0.72, 0.008, 0.036, 1.6],
+		 [0.94, 0.004, 0.016, 1.7],
+		 [1.00, 0.001, 0.002, 1.8]],
+		14, 6, PackedFloat32Array(), true, true, 1.2)
+	blade = MeshLib.with_tangents(blade)
+	return {"hilt": hilt, "blade": blade}
+
+## Attaches the katana to the right hand. Call after the skeleton exists.
+static func attach_weapon(skeleton: Skeleton3D) -> BoneAttachment3D:
+	var meshes := {}
+	for part in ["hilt", "blade"]:
+		var key := "%s_weapon_%s" % [CACHE_KEY, part]
+		var mesh := BuildCache.mesh(key, func() -> Mesh:
+			var built := build_weapon_meshes()
+			return MeshLib.arrays_to_mesh(built[part], null, part))
+		meshes[part] = mesh
+
+	var attachment := BoneAttachment3D.new()
+	attachment.name = "WeaponAttachment"
+	attachment.bone_name = "Hand.R"
+	skeleton.add_child(attachment)
+
+	var weapon := Node3D.new()
+	weapon.name = "EnergyBlade"
+	# grip sits in the palm; a slight forward cant so idle carry looks ready
+	weapon.position = Vector3(0, -0.035, 0.01)
+	weapon.rotation = Vector3(-0.28, 0.0, 0.10)
+	attachment.add_child(weapon)
+
+	var hilt_mi := MeshInstance3D.new()
+	hilt_mi.mesh = meshes["hilt"]
+	hilt_mi.material_override = Materials.armor("dark")
+	weapon.add_child(hilt_mi)
+	var blade_mi := MeshInstance3D.new()
+	blade_mi.mesh = meshes["blade"]
+	blade_mi.material_override = Materials.energy(Materials.ORANGE_HOT, 15.0)
+	blade_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	weapon.add_child(blade_mi)
+	return attachment
 
 # ------------------------------------------------------------------- build --
 
@@ -299,6 +383,8 @@ static func create_node(cfg: Dictionary = {}) -> Node3D:
 		"trim": Materials.energy(Materials.ORANGE_EMISSIVE, 9.0),
 		"visor": Materials.energy(Materials.VISOR_COLOR, 13.0),
 	}
+
+	attach_weapon(skeleton)
 
 	var skin_resource := skeleton.create_skin_from_rest_transforms()
 	for group in groups.keys():

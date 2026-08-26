@@ -45,52 +45,73 @@ func _ready() -> void:
 	set_process(false)
 	set_physics_process(false)
 
-static func _look(pos: Vector3, target: Vector3) -> Transform3D:
+static func _look(pos: Vector3, target: Vector3, roll: float = 0.0) -> Transform3D:
 	var direction := target - pos
 	if direction.length_squared() < 0.000001:
 		direction = Vector3.FORWARD
-	return Transform3D.IDENTITY.looking_at(direction).translated(pos)
+	var xform := Transform3D.IDENTITY.looking_at(direction)
+	if absf(roll) > 0.0001:
+		# dutch: rotate about the view axis after aiming
+		xform.basis = xform.basis * Basis(Vector3.BACK, roll)
+	return xform.translated(pos)
+
+## Where the hero is heading — used to lead the frame like a camera operator.
+func _hero_lead() -> Vector3:
+	if _player != null and is_instance_valid(_player):
+		var v: Vector3 = _player.velocity
+		v.y = 0.0
+		if v.length() > 1.0:
+			return v.normalized()
+		return -_player.global_transform.basis.z
+	return Vector3.FORWARD
 
 func _build_reel() -> void:
 	var arena := WorldBuilder.ARENA_RADIUS
 	_shots = [
-		# 0-10 s: high establishing orbit over the district, monolith centred.
+		# 0-8 s: descending aerial orbit over the lit district.
 		[0.0, "establish", func(t: float, _T: float) -> Transform3D:
-			# Stays above the tallest towers (~75 m) for the whole move, so the
-			# orbit never clips through a rooftop.
-			var angle := lerpf(-0.4, 0.9, t)
-			var radius := lerpf(128.0, 92.0, t)
-			var height := lerpf(88.0, 52.0, t)
-			return _look(Vector3(cos(angle) * radius, height, sin(angle) * radius), Vector3(0, 9, 0))],
-		# 10-20 s: low crane through a street toward the plaza.
-		[10.0, "street", func(t: float, _T: float) -> Transform3D:
-			var z := lerpf(arena + 46.0, arena + 6.0, t)
-			var height := lerpf(2.2, 4.6, t)
-			return _look(Vector3(lerpf(-8.0, -2.0, t), height, z), Vector3(0, 6.5 - t * 3.0, 0))],
-		# 20-32 s: slow arc around the hero as he walks in and wave 1 spawns.
-		[20.0, "hero", func(t: float, _T: float) -> Transform3D:
+			var angle := lerpf(-0.5, 0.7, t)
+			var radius := lerpf(126.0, 88.0, t)
+			var height := lerpf(86.0, 46.0, t)
+			return _look(Vector3(cos(angle) * radius, height, sin(angle) * radius),
+				Vector3(0, lerpf(14.0, 8.0, t), 0), 0.05 * sin(t * PI))],
+		# 8-14 s: fast low dolly down the avenue toward the plaza.
+		[8.0, "street", func(t: float, _T: float) -> Transform3D:
+			var z := lerpf(arena + 40.0, arena + 7.0, t)
+			return _look(Vector3(lerpf(-6.0, -1.2, t), lerpf(1.6, 3.2, t), z),
+				Vector3(0, lerpf(5.5, 2.6, t), 0), -0.035)],
+		# 14-24 s: tracking shot running WITH the hero, camera leading him.
+		[14.0, "chase", func(t: float, T: float) -> Transform3D:
 			var hero := _hero_pos()
-			var angle := lerpf(2.4, 0.6, t)
-			var radius := lerpf(6.5, 4.2, t)
-			return _look(hero + Vector3(cos(angle) * radius, lerpf(2.6, 1.5, t), sin(angle) * radius),
-				hero + Vector3(0, 1.25, 0))],
-		# 32-46 s: combat coverage — shoulder-height tracking shot.
-		[32.0, "combat", func(t: float, T: float) -> Transform3D:
+			var lead := _hero_lead()
+			var side := lead.cross(Vector3.UP)
+			var pos := hero + lead * 2.6 + side * lerpf(2.2, 1.2, t) + Vector3(0, 1.35 + 0.1 * sin(T * 1.7), 0)
+			return _look(pos, hero + Vector3(0, 1.25, 0) + lead * 0.8, 0.03)],
+		# 24-38 s: close combat orbit, height breathing with the action.
+		[24.0, "combat_orbit", func(_t: float, T: float) -> Transform3D:
 			var hero := _hero_pos()
-			var angle := T * 0.35
-			return _look(hero + Vector3(cos(angle) * 5.2, 2.1 + sin(T * 0.9) * 0.3, sin(angle) * 5.2),
-				hero + Vector3(0, 1.1, 0))],
-		# 46-54 s: low hero-worship angle against the monolith.
-		[46.0, "low", func(t: float, _T: float) -> Transform3D:
+			var angle := T * 0.55
+			var radius := 4.0 + 0.7 * sin(T * 0.8)
+			return _look(hero + Vector3(cos(angle) * radius, 1.7 + 0.45 * sin(T * 1.1), sin(angle) * radius),
+				hero + Vector3(0, 1.15, 0), 0.05 * sin(T * 0.7))],
+		# 38-46 s: low frontal tracking — the hero charges the lens.
+		[38.0, "combat_low", func(t: float, _T: float) -> Transform3D:
 			var hero := _hero_pos()
-			var to_monolith := (Vector3.ZERO - hero).normalized()
-			var pos := hero - to_monolith * lerpf(3.4, 2.6, t) + Vector3(0, 0.55, 0)
-			return _look(pos, hero + Vector3(0, 1.3, 0) + to_monolith * 3.0)],
-		# 54-60 s: pull away and rise to the title framing.
-		[54.0, "outro", func(t: float, _T: float) -> Transform3D:
+			var lead := _hero_lead()
+			var pos := hero + lead * lerpf(4.2, 2.8, t) + Vector3(0, 0.55, 0)
+			return _look(pos, hero + Vector3(0, 1.45, 0), -0.045)],
+		# 46-52 s: slow-motion over-the-shoulder push-in (time runs at 0.35x).
+		[46.0, "slowmo", func(t: float, _T: float) -> Transform3D:
+			var hero := _hero_pos()
+			var lead := _hero_lead()
+			var side := lead.cross(Vector3.UP)
+			var pos := hero - lead * lerpf(2.0, 1.2, t) + side * 0.75 + Vector3(0, lerpf(1.8, 1.5, t), 0)
+			return _look(pos, hero + lead * 3.0 + Vector3(0, 1.15, 0), 0.06)],
+		# 52-60 s: crane away and up to the title framing.
+		[52.0, "outro", func(t: float, _T: float) -> Transform3D:
 			var e := t * t
-			return _look(Vector3(lerpf(4.0, 26.0, e), lerpf(2.0, 20.0, e), lerpf(14.0, 52.0, e)),
-				Vector3(0, lerpf(2.0, 10.0, e), 0))],
+			return _look(Vector3(lerpf(3.0, 30.0, e), lerpf(1.8, 22.0, e), lerpf(12.0, 55.0, e)),
+				Vector3(0, lerpf(2.0, 10.5, e), 0), 0.02 * (1.0 - t))],
 	]
 
 func _hero_pos() -> Vector3:
@@ -129,6 +150,7 @@ func stop() -> void:
 		_player.bot_enabled = false
 	set_process(false)
 	set_physics_process(false)
+	Game.set_base_time_scale(1.0)
 	# hand the view back to the gameplay rig
 	var rig := _main.get_node_or_null("CameraRig") as CameraRig
 	if rig != null:
@@ -173,7 +195,11 @@ func _apply_camera() -> void:
 	_camera.transform = (current[2] as Callable).call(eased, time)
 
 func _process(delta: float) -> void:
-	time += delta
+	# The reel clock runs in REAL seconds: _process delta shrinks under the
+	# slow-mo Engine.time_scale, so divide it back out — the demo stays a true
+	# 60 seconds while the world moves at 0.35x inside the kill-cam shot.
+	time += delta / maxf(Engine.time_scale, 0.05)
+	Game.set_base_time_scale(0.35 if (time >= 46.5 and time < 51.0) else 1.0)
 	if time >= DURATION:
 		if kiosk:
 			time = 0.0
@@ -185,8 +211,48 @@ func _process(delta: float) -> void:
 	_update_outro()
 	_apply_camera()
 
+var _spawn_cooldown: float = 0.0
+
 func _physics_process(delta: float) -> void:
+	_ensure_combat(delta)
 	_drive_bot(delta)
+
+## The wave system paces itself for play, not for film — between waves the
+## reel would show an empty plaza. From the chase shot to the outro the demo
+## keeps at least two creatures alive near the hero at all times.
+func _ensure_combat(delta: float) -> void:
+	_spawn_cooldown = maxf(0.0, _spawn_cooldown - delta)
+	if time < 13.0 or time > 50.0 or _spawn_cooldown > 0.0:
+		return
+	if _player == null or not is_instance_valid(_player):
+		return
+	var alive := 0
+	for node in _player.get_tree().get_nodes_in_group("enemy"):
+		if node.has_method("is_alive") and node.call("is_alive"):
+			alive += 1
+	if alive >= 2:
+		return
+	_spawn_cooldown = 2.2
+	var kind := Monster.Kind.SWARMER
+	if time > 36.0:
+		kind = Monster.Kind.STALKER
+	elif randf() < 0.4:
+		kind = Monster.Kind.STALKER
+	var agent := MonsterAgent.new()
+	agent.setup(kind)
+	agent.target = _player
+	var angle := randf() * TAU
+	var at := _player.global_position + Vector3(cos(angle), 0, sin(angle)) * randf_range(8.0, 12.0)
+	at.y = 1.0
+	# keep spawns inside the plaza so the fight stays in frame
+	var flat := Vector2(at.x, at.z)
+	if flat.length() > WorldBuilder.ARENA_RADIUS - 2.0:
+		flat = flat.normalized() * (WorldBuilder.ARENA_RADIUS - 4.0)
+		at = Vector3(flat.x, 1.0, flat.y)
+	_main.add_child(agent)
+	agent.global_position = at
+	Game.enemies_alive += 1
+	VFX.dissolve(_main, at + Vector3(0, 1.0, 0), 0.8)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not active or kiosk:

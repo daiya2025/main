@@ -483,8 +483,8 @@ func _test_demo_reel() -> void:
 
 	# The reel must cover the full 60 seconds with a finite camera transform at
 	# every sampled instant, and the cuts must land where the reel says.
-	var expected := {0.0: "establish", 12.0: "street", 25.0: "hero",
-		40.0: "combat", 50.0: "low", 57.0: "outro"}
+	var expected := {0.0: "establish", 10.0: "street", 20.0: "chase",
+		30.0: "combat_orbit", 42.0: "combat_low", 48.0: "slowmo", 56.0: "outro"}
 	var all_finite := true
 	for t in range(0, 61):
 		demo.call("seek", float(t))

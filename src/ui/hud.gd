@@ -12,6 +12,10 @@ const INK := Color(0.05, 0.045, 0.05, 0.72)
 const WHITE := Color(0.96, 0.94, 0.92)
 
 var font: SystemFont
+var font_bold: SystemFont
+## Display face for titles and numerals: Bahnschrift ships with Windows 11 and
+## has the condensed technical look the HUD wants; the JP faces cover kanji.
+var font_display: SystemFont
 
 var _health_ratio: float = 1.0
 var _health_lag: float = 1.0
@@ -47,6 +51,14 @@ func _ready() -> void:
 		"Yu Gothic UI", "Meiryo UI", "Yu Gothic", "Meiryo", "MS Gothic",
 		"Noto Sans CJK JP", "Noto Sans JP", "Hiragino Sans", "sans-serif"])
 	font.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_AUTO
+	font_bold = font.duplicate() as SystemFont
+	font_bold.font_weight = 700
+	font_display = SystemFont.new()
+	font_display.font_names = PackedStringArray([
+		"Bahnschrift", "Segoe UI Black", "Arial Black",
+		"Yu Gothic UI", "Noto Sans CJK JP", "sans-serif"])
+	font_display.font_weight = 700
+	font_display.font_stretch = 87
 
 	_build_post_process()
 	_build_bars()
@@ -166,18 +178,18 @@ func _build_loading() -> void:
 	box.add_theme_constant_override("separation", 14)
 
 	var title := Label.new()
-	title.add_theme_font_override("font", font)
-	title.add_theme_font_size_override("font_size", 40)
+	title.add_theme_font_override("font", font_display)
+	title.add_theme_font_size_override("font_size", 42)
 	title.add_theme_color_override("font_color", ORANGE)
 	title.text = "DIGIHARIMAN"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
 
 	var subtitle := Label.new()
-	subtitle.add_theme_font_override("font", font)
-	subtitle.add_theme_font_size_override("font_size", 16)
+	subtitle.add_theme_font_override("font", font_display)
+	subtitle.add_theme_font_size_override("font_size", 15)
 	subtitle.add_theme_color_override("font_color", WHITE)
-	subtitle.text = "ORANGE PROTOCOL"
+	subtitle.text = "O R A N G E   P R O T O C O L"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(subtitle)
 
@@ -241,21 +253,23 @@ func _build_cinema() -> void:
 	_title_card.custom_minimum_size = Vector2(640, 140)
 	_title_card.add_theme_constant_override("separation", 8)
 	var title := Label.new()
-	title.add_theme_font_override("font", font)
-	title.add_theme_font_size_override("font_size", 58)
+	title.add_theme_font_override("font", font_display)
+	title.add_theme_font_size_override("font_size", 64)
 	title.add_theme_color_override("font_color", ORANGE)
+	title.add_theme_color_override("font_outline_color", Color(0.28, 0.08, 0.0, 0.85))
+	title.add_theme_constant_override("outline_size", 10)
 	title.text = "DIGIHARIMAN"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_card.add_child(title)
 	var sub := Label.new()
-	sub.add_theme_font_override("font", font)
-	sub.add_theme_font_size_override("font_size", 20)
+	sub.add_theme_font_override("font", font_display)
+	sub.add_theme_font_size_override("font_size", 19)
 	sub.add_theme_color_override("font_color", WHITE)
-	sub.text = "ORANGE PROTOCOL"
+	sub.text = "O R A N G E   P R O T O C O L"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_card.add_child(sub)
 	var hint := Label.new()
-	hint.add_theme_font_override("font", font)
+	hint.add_theme_font_override("font", font_bold)
 	hint.add_theme_font_size_override("font_size", 14)
 	hint.add_theme_color_override("font_color", Color(0.7, 0.68, 0.66))
 	hint.text = "任意のキーで開始"
@@ -306,7 +320,7 @@ func _build_death_overlay() -> void:
 	box.custom_minimum_size = Vector2(520, 100)
 	box.add_theme_constant_override("separation", 10)
 	var title := Label.new()
-	title.add_theme_font_override("font", font)
+	title.add_theme_font_override("font", font_bold)
 	title.add_theme_font_size_override("font_size", 44)
 	title.add_theme_color_override("font_color", Color(1.0, 0.30, 0.10))
 	title.text = "機能停止"
@@ -409,22 +423,27 @@ func _draw_bars() -> void:
 	if _combo > 1:
 		var alpha := clampf(_combo_timer / 2.6, 0.0, 1.0)
 		var scale := 1.0 + clampf(float(_combo) / 30.0, 0.0, 0.8)
-		var text := "%d COMBO" % _combo
+		var text := "%02d COMBO" % _combo
 		var pos := Vector2(size.x - 260.0, size.y * 0.42)
-		_bars.draw_string(font, pos + Vector2(2, 2), text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+		_bars.draw_string(font_display, pos + Vector2(2, 2), text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 			int(34 * scale), Color(0, 0, 0, 0.55 * alpha))
-		_bars.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+		_bars.draw_string(font_display, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 			int(34 * scale), Color(ORANGE, alpha))
 
-	var wave_text := "WAVE %d   残り %d" % [_wave, _remaining]
-	_bars.draw_string(font, Vector2(x, 52.0), wave_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, WHITE)
-	_bars.draw_string(font, Vector2(x, 78.0), "SCORE %d" % Game.score, HORIZONTAL_ALIGNMENT_LEFT, -1, 16,
-		Color(0.72, 0.70, 0.68))
+	var wave_text := "WAVE %02d" % _wave
+	_bars.draw_string(font_display, Vector2(x, 52.0), wave_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, WHITE)
+	_bars.draw_string(font_bold, Vector2(x + 132.0, 52.0), "残存 %d" % _remaining,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(1.0, 0.62, 0.28))
+	_bars.draw_string(font_display, Vector2(x, 78.0), "SCORE %06d" % Game.score,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.72, 0.70, 0.68))
 
 	if _toast_time > 0.0:
+		# Docked above the meters, not across the middle of the frame.
 		var alpha := clampf(_toast_time, 0.0, 1.0)
-		_bars.draw_string(font, Vector2(size.x * 0.5 - 200.0, size.y * 0.26), _toast_text,
-			HORIZONTAL_ALIGNMENT_CENTER, 400, 22, Color(WHITE, alpha))
+		var ty := y - 34.0
+		_bars.draw_rect(Rect2(x, ty - 13.0, 3.0, 16.0), Color(ORANGE, alpha))
+		_bars.draw_string(font_bold, Vector2(x + 10.0, ty), _toast_text,
+			HORIZONTAL_ALIGNMENT_LEFT, 560, 15, Color(WHITE, alpha))
 
 func _draw_meter(rect: Rect2, value: float, lag: float, color: Color, label: String) -> void:
 	_bars.draw_rect(Rect2(rect.position - Vector2(2, 2), rect.size + Vector2(4, 4)), INK)
@@ -438,8 +457,8 @@ func _draw_meter(rect: Rect2, value: float, lag: float, color: Color, label: Str
 		var tx := rect.position.x + rect.size.x * 0.25 * float(i)
 		_bars.draw_line(Vector2(tx, rect.position.y), Vector2(tx, rect.position.y + rect.size.y),
 			Color(0, 0, 0, 0.45), 1.0)
-	_bars.draw_string(font, rect.position + Vector2(0, -6), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
-		Color(0.75, 0.73, 0.71))
+	_bars.draw_string(font_bold, rect.position + Vector2(0, -6), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
+		Color(0.78, 0.76, 0.74))
 
 func _draw_center() -> void:
 	var c := _center.size * 0.5

@@ -42,6 +42,13 @@ func _process(delta: float) -> void:
 			combo = 0
 			Signals.combo_changed.emit(0, 0.0)
 
+## Cinematic slow motion (the demo's kill-cam). Hit-stop restores to this
+## value instead of a hardcoded 1.0, so the two systems compose.
+func set_base_time_scale(value: float) -> void:
+	_base_time_scale = clampf(value, 0.05, 1.0)
+	if _hit_stop_remaining <= 0.0:
+		Engine.time_scale = _base_time_scale
+
 func _on_hit_stop(duration: float, time_scale: float) -> void:
 	# A short, hard freeze on impact is the single strongest "weight" cue in
 	# action games; stacking is clamped so chained hits never lock the sim.
