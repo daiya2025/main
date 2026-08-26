@@ -24,6 +24,7 @@ var _toast_text: String = ""
 var _toast_time: float = 0.0
 var _hit_flash: float = 0.0
 var _visible_hud: bool = true
+var _help_countdown: float = 12.0
 
 var _bars: Control
 var _center: Control
@@ -229,6 +230,16 @@ func _hide_loading() -> void:
 # ---------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	# The controls card earns its screen space for the first few seconds only;
+	# H brings it back.
+	if _help_countdown > 0.0 and _help.visible:
+		_help_countdown -= delta
+		if _help_countdown <= 0.0:
+			var tween := create_tween()
+			tween.tween_property(_help, "modulate:a", 0.0, 0.8)
+			tween.tween_callback(func() -> void:
+				_help.hide()
+				_help.modulate.a = 1.0)
 	_health_lag = move_toward(_health_lag, _health_ratio, delta * 0.55)
 	_hit_flash = maxf(0.0, _hit_flash - delta * 2.2)
 	_combo_timer = maxf(0.0, _combo_timer - delta)
@@ -241,10 +252,15 @@ func _process(delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_ui"):
-		_visible_hud = not _visible_hud
-		_bars.visible = _visible_hud
-		_center.visible = _visible_hud
-		_help.visible = _visible_hud
+		if not _help.visible:
+			# First H after the card auto-hid: just bring the card back.
+			_help_countdown = 20.0
+			_help.show()
+		else:
+			_visible_hud = not _visible_hud
+			_bars.visible = _visible_hud
+			_center.visible = _visible_hud
+			_help.visible = _visible_hud
 
 # ------------------------------------------------------------------ drawing --
 
