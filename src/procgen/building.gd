@@ -38,9 +38,10 @@ static func build(rng: RandomNumberGenerator, style: Style, footprint: Vector2, 
 		top_y = base + size.y
 		# Cornice: a thin oversized slab capping each tier. Cheap geometry, and
 		# it is what reads as "architecture" instead of "extruded rectangle".
-		var cornice := Sculpt.rounded_box(Vector3(size.x + 0.55, 0.42, size.z + 0.55), 0.08, 2)
+		var cornice := Sculpt.rounded_box(Vector3(size.x + 0.30, 0.28, size.z + 0.30), 0.08, 2)
 		cornice = Sculpt.project_uv_spherical(cornice, Vector3.ZERO)
 		detail = Sculpt.merge(detail, cornice, Transform3D(Basis(), Vector3(offset.x, top_y - 0.10, offset.y)))
+		detail = _tier_relief(detail, rng, offset, size, base)
 		if i == 0 and style != Style.LOW_RISE:
 			# ground-floor canopy over the entrance side
 			var canopy := Sculpt.rounded_box(Vector3(size.x * 0.55, 0.22, 1.6), 0.06, 2)
@@ -148,6 +149,46 @@ static func _quad(st: SurfaceTool, p0: Vector3, p1: Vector3, p2: Vector3, p3: Ve
 			st.set_uv(tri[i * 2 + 1])
 			st.add_vertex(tri[i * 2])
 
+## Vertical pilasters, corner piers and per-floor spandrel bands. This is what
+## breaks the "extruded rectangle" read: a real facade is a grid of structure
+## in relief, and light needs edges to catch.
+static func _tier_relief(detail: Array, rng: RandomNumberGenerator, offset: Vector2, size: Vector3, base: float) -> Array:
+	var hx := size.x * 0.5
+	var hz := size.z * 0.5
+	var cy := base + size.y * 0.5
+
+	# corner piers, slightly proud on both faces
+	var pier := Sculpt.rounded_box(Vector3(0.46, size.y, 0.46), 0.06, 1)
+	pier = Sculpt.project_uv_spherical(pier, Vector3.ZERO)
+	for corner in [Vector2(hx, hz), Vector2(-hx, hz), Vector2(hx, -hz), Vector2(-hx, -hz)]:
+		detail = Sculpt.merge(detail, pier, Transform3D(Basis(), Vector3(offset.x + corner.x, cy, offset.y + corner.y)))
+
+	# pilaster strips along each facade, one per second bay
+	var spacing := rng.randf_range(4.6, 6.4)
+	var strip_x := Sculpt.rounded_box(Vector3(0.26, size.y, 0.15), 0.04, 1)
+	strip_x = Sculpt.project_uv_spherical(strip_x, Vector3.ZERO)
+	var count_x := int(size.x / spacing)
+	for i in count_x:
+		var x := offset.x - hx + size.x * (float(i) + 0.5) / float(count_x)
+		detail = Sculpt.merge(detail, strip_x, Transform3D(Basis(), Vector3(x, cy, offset.y + hz)))
+		detail = Sculpt.merge(detail, strip_x, Transform3D(Basis(), Vector3(x, cy, offset.y - hz)))
+	var strip_z := Sculpt.rounded_box(Vector3(0.15, size.y, 0.26), 0.04, 1)
+	strip_z = Sculpt.project_uv_spherical(strip_z, Vector3.ZERO)
+	var count_z := int(size.z / spacing)
+	for i in count_z:
+		var z := offset.y - hz + size.z * (float(i) + 0.5) / float(count_z)
+		detail = Sculpt.merge(detail, strip_z, Transform3D(Basis(), Vector3(offset.x + hx, cy, z)))
+		detail = Sculpt.merge(detail, strip_z, Transform3D(Basis(), Vector3(offset.x - hx, cy, z)))
+
+	# spandrel band at every floor line: a thin ring just proud of the walls
+	var floors := int(size.y / FLOOR_HEIGHT)
+	if floors > 1:
+		var band := Sculpt.rounded_box(Vector3(size.x + 0.09, 0.17, size.z + 0.09), 0.03, 1)
+		band = Sculpt.project_uv_spherical(band, Vector3.ZERO)
+		for f in range(1, floors):
+			detail = Sculpt.merge(detail, band, Transform3D(Basis(), Vector3(offset.x, base + float(f) * FLOOR_HEIGHT, offset.y)))
+	return detail
+
 ## Rooftop mechanical plant: HVAC blocks, a water tank, vents, a parapet and an
 ## antenna. Rooftops are what the player sees from above during a jump, so an
 ## empty one is an obvious tell.
@@ -243,7 +284,7 @@ static func create_node(rng: RandomNumberGenerator, style: Style, footprint: Vec
 	detail_mi.name = "Detail"
 	detail_mi.mesh = detail_mesh
 	detail_mi.material_override = AssetLibrary.material("concrete_floor", {
-		"uv_scale": 1.2, "triplanar": true, "roughness": 0.78, "tint": Color(0.62, 0.61, 0.60)})
+		"uv_scale": 1.2, "triplanar": true, "roughness": 0.82, "tint": Color(0.20, 0.20, 0.22)})
 	detail_mi.gi_mode = GeometryInstance3D.GI_MODE_STATIC
 	root.add_child(detail_mi)
 

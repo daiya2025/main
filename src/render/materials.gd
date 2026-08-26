@@ -82,12 +82,14 @@ static func armor(variant: String = "primary") -> ShaderMaterial:
 	var mat := _make(ARMOR, "armor_%s" % variant)
 	match variant:
 		"dark":
+			mat.set_shader_parameter("front_split", 0.0)
 			mat.set_shader_parameter("paint_color", Color(0.085, 0.088, 0.098))
 			mat.set_shader_parameter("paint_shadow", Color(0.028, 0.030, 0.036))
 			mat.set_shader_parameter("flake_amount", 0.18)
 			mat.set_shader_parameter("paint_roughness", 0.35)
 			mat.set_shader_parameter("energy_emission", 2.5)
 		"trim":
+			mat.set_shader_parameter("front_split", 0.0)
 			mat.set_shader_parameter("paint_color", ORANGE_HOT)
 			mat.set_shader_parameter("paint_shadow", ORANGE_DEEP)
 			mat.set_shader_parameter("flake_amount", 0.5)
@@ -102,6 +104,10 @@ static func armor(variant: String = "primary") -> ShaderMaterial:
 	# unset uniform reads back as null and would be skipped.
 	mat.set_shader_parameter("charge", 0.7)
 	return mat
+
+## The visor / sensor colour: white-cyan, the one hue the rest of the game
+## never uses, so "the glowing band means the front" is unambiguous.
+const VISOR_COLOR := Color(0.72, 0.95, 1.0)
 
 static func energy(color: Color = ORANGE_EMISSIVE, intensity: float = 8.0) -> ShaderMaterial:
 	var mat := _make(ENERGY, "energy_%s_%0.1f" % [color.to_html(false), intensity])

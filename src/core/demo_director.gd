@@ -23,6 +23,9 @@ var _player: Player
 var _camera: Camera3D
 var _bot_attack_cooldown: float = 0.0
 var _bot_dash_cooldown: float = 0.0
+var _bot_jump_cooldown: float = 3.0
+var _bot_strafe_sign: float = 1.0
+var _bot_strafe_timer: float = 0.0
 var _spawned_extra: bool = false
 
 ## The reel. Each shot: start time, name, and a Callable(t01, T) -> Transform3D
@@ -107,6 +110,10 @@ func start(loop_forever: bool = false) -> void:
 	if _player != null:
 		_player.bot_enabled = true
 	Game.demo_mode = true
+	# Bring the first wave in quickly so the fight starts while the reel is on
+	# its hero coverage instead of after it.
+	if Game.enemies_alive <= 0 and _main != null:
+		_main.set("_wave_timer", minf(float(_main.get("_wave_timer")), 3.0))
 	_camera.current = true
 	set_process(true)
 	set_physics_process(true)
@@ -197,36 +204,57 @@ func _drive_bot(delta: float) -> void:
 		return
 	_bot_attack_cooldown = maxf(0.0, _bot_attack_cooldown - delta)
 	_bot_dash_cooldown = maxf(0.0, _bot_dash_cooldown - delta)
-	var bot := {"move": Vector3.ZERO, "attack": false, "special": false, "dash": false, "sprint": false}
+	_bot_jump_cooldown = maxf(0.0, _bot_jump_cooldown - delta)
+	_bot_strafe_timer -= delta
+	if _bot_strafe_timer <= 0.0:
+		# change circling direction every few seconds so the footwork varies
+		_bot_strafe_sign = -_bot_strafe_sign
+		_bot_strafe_timer = randf_range(1.6, 3.2)
+	var bot := {"move": Vector3.ZERO, "attack": false, "special": false,
+		"dash": false, "sprint": false, "jump": false}
 
 	var enemy := _nearest_enemy()
 	if time < 20.0:
-		# walk toward the plaza centre so the street shot has a subject
+		# sprint into the plaza so the street shot has a moving subject
 		var to_centre := Vector3.ZERO - _player.global_position
 		to_centre.y = 0.0
 		if to_centre.length() > 6.0:
 			bot["move"] = to_centre.normalized()
+			bot["sprint"] = true
+			if _bot_jump_cooldown <= 0.0:
+				bot["jump"] = true
+				_bot_jump_cooldown = 3.5
 	elif enemy != null:
 		var to_enemy := enemy.global_position - _player.global_position
 		to_enemy.y = 0.0
 		var dist := to_enemy.length()
+		var toward := to_enemy.normalized()
+		var strafe := toward.rotated(Vector3.UP, PI * 0.5) * _bot_strafe_sign
 		if dist > 14.0 and _bot_attack_cooldown <= 0.0:
 			bot["special"] = true
-			_bot_attack_cooldown = 1.4
-		if dist > 2.4:
-			bot["move"] = to_enemy.normalized()
-			bot["sprint"] = dist > 8.0
-			if dist > 5.0 and dist < 9.0 and _bot_dash_cooldown <= 0.0:
+			_bot_attack_cooldown = 1.2
+		if dist > 2.2:
+			# angle in rather than beeline: reads as footwork, not homing
+			bot["move"] = (toward * 0.75 + strafe * 0.65).normalized()
+			bot["sprint"] = dist > 7.0
+			if dist > 4.5 and dist < 10.0 and _bot_dash_cooldown <= 0.0:
 				bot["dash"] = true
-				_bot_dash_cooldown = 2.6
-		elif _bot_attack_cooldown <= 0.0:
-			bot["attack"] = true
-			_bot_attack_cooldown = 0.32
+				_bot_dash_cooldown = 2.2
+			if dist < 6.0 and _bot_jump_cooldown <= 0.0 and randf() < delta * 0.5:
+				bot["jump"] = true
+				_bot_jump_cooldown = 4.0
+		else:
+			# in range: keep circling between swings instead of standing still
+			bot["move"] = strafe * 0.5
+			if _bot_attack_cooldown <= 0.0:
+				bot["attack"] = true
+				_bot_attack_cooldown = 0.28
 	else:
-		# idle flourish between waves: drift around the monolith
+		# between waves: lap the monolith at a run
 		var orbit := Vector3(-_player.global_position.z, 0, _player.global_position.x)
 		if orbit.length() > 0.1:
-			bot["move"] = orbit.normalized() * 0.4
+			bot["move"] = (orbit.normalized() * 0.85 + (Vector3.ZERO - _player.global_position).normalized() * 0.1).normalized()
+			bot["sprint"] = true
 	_player.bot_input = bot
 
 func _nearest_enemy() -> Node3D:

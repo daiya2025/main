@@ -268,7 +268,7 @@ static func _district(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
 	var roles := ["concrete_wall", "brick", "concrete_floor", "metal_plate"]
 	var half := float(GRID) * 0.5
 	var detail_material := AssetLibrary.material("concrete_floor", {
-		"uv_scale": 1.2, "triplanar": true, "roughness": 0.78, "tint": Color(0.60, 0.59, 0.58)})
+		"uv_scale": 1.2, "triplanar": true, "roughness": 0.82, "tint": Color(0.20, 0.20, 0.22)})
 
 	for gx in GRID:
 		for gz in GRID:
@@ -417,7 +417,7 @@ static func _plaza(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
 	core_light.omni_range = 46.0
 	core_light.omni_attenuation = 1.4
 	core_light.shadow_enabled = true
-	core_light.light_volumetric_fog_energy = 3.0
+	core_light.light_volumetric_fog_energy = 0.8
 	node.add_child(core_light)
 	stats["lights"] = int(stats["lights"]) + 1
 
@@ -522,7 +522,7 @@ static func _street_props(rng: RandomNumberGenerator, stats: Dictionary) -> Node
 		light.omni_range = 17.0
 		light.omni_attenuation = 1.6
 		light.shadow_enabled = i < 4
-		light.light_volumetric_fog_energy = 2.0
+		light.light_volumetric_fog_energy = 0.6
 		node.add_child(light)
 		stats["lights"] = int(stats["lights"]) + 1
 		var bulb := MeshInstance3D.new()
@@ -754,7 +754,7 @@ static func _background(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D
 	process.turbulence_noise_scale = 0.6
 	process.scale_min = 0.15
 	process.scale_max = 0.5
-	process.color = Color(1.0, 0.85, 0.6, 0.05)
+	process.color = Color(0.88, 0.89, 0.95, 0.03)
 	dust.process_material = process
 	var quad := QuadMesh.new()
 	quad.size = Vector2(0.05, 0.05)
@@ -826,7 +826,7 @@ static func _signage(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
 				glow.omni_range = 10.0
 				glow.position = label.position + Vector3(0, 0, 0)
 				glow.shadow_enabled = false
-				glow.light_volumetric_fog_energy = 1.6
+				glow.light_volumetric_fog_energy = 0.4
 				node.add_child(glow)
 				stats["lights"] = int(stats["lights"]) + 1
 			made += 1

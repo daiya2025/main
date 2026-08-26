@@ -46,7 +46,8 @@ var lock_on_target: Node3D = null
 ## real devices. Kept as data (not calls into the player) so the whole combat
 ## stack runs identically under the bot.
 var bot_enabled: bool = false
-var bot_input: Dictionary = {"move": Vector3.ZERO, "attack": false, "special": false, "dash": false, "sprint": false}
+var bot_input: Dictionary = {"move": Vector3.ZERO, "attack": false, "special": false, "dash": false, "sprint": false, "jump": false}
+var _bot_jump_edge: bool = false
 var _bot_attack_edge: bool = false
 var _bot_dash_edge: bool = false
 var _bot_special_edge: bool = false
@@ -187,7 +188,7 @@ func _process_move(delta: float, wish: Vector3) -> void:
 	velocity.x = planar.x
 	velocity.z = planar.z
 
-	if not bot_enabled and Input.is_action_just_pressed("jump"):
+	if _pressed_jump():
 		if is_on_floor():
 			velocity.y = JUMP_VELOCITY
 			Signals.camera_fov_kick_requested.emit(1.5, 0.2)
@@ -261,6 +262,14 @@ func _cast_bolt() -> void:
 # ------------------------------------------------------------------ combat --
 
 ## Edge detection for the bot flags, mirroring is_action_just_pressed.
+func _pressed_jump() -> bool:
+	if not bot_enabled:
+		return Input.is_action_just_pressed("jump")
+	var now := bool(bot_input.get("jump", false))
+	var edge := now and not _bot_jump_edge
+	_bot_jump_edge = now
+	return edge
+
 func _pressed_attack() -> bool:
 	if not bot_enabled:
 		return Input.is_action_just_pressed("attack")

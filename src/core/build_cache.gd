@@ -7,7 +7,7 @@ extends RefCounted
 ## written to user://cache and reloaded on subsequent runs. Bumping VERSION
 ## (or changing the key) invalidates everything derived from it.
 
-const VERSION := 11
+const VERSION := 14
 const DIR := "user://cache"
 
 static var enabled: bool = true

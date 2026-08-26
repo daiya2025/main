@@ -159,7 +159,7 @@ func _test_hero() -> void:
 			meshes += 1
 			if (child as MeshInstance3D).mesh == null or (child as MeshInstance3D).skin == null:
 				skinned_ok = false
-	_check(meshes == 5, "five material groups (%d)" % meshes)
+	_check(meshes == 6, "six material groups (%d)" % meshes)
 	_check(skinned_ok, "every group is skinned")
 	print("     assembled in %d ms (first run, cold cache)" % (Time.get_ticks_msec() - t1))
 

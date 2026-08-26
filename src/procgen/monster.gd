@@ -393,6 +393,15 @@ static func build(kind: Kind, cfg: Dictionary = {}) -> Dictionary:
 	var core := Sculpt.uv_sphere(Vector3(0.10, 0.10, 0.10) * scale, 16, 22)
 	core = Sculpt.project_uv_spherical(core, Vector3.ZERO)
 	core = MeshLib.translate(core, core_center)
+	# Glowing eyes on the skull front: without them a dark carapace head has no
+	# readable facing at combat distance.
+	var head_origin: Vector3 = m["Head"]
+	var head_size := float(p["head_size"])
+	for side in [1.0, -1.0]:
+		var eye := Sculpt.uv_sphere(Vector3(head_size * 0.12, head_size * 0.10, head_size * 0.10), 10, 14)
+		eye = Sculpt.project_uv_spherical(eye, Vector3.ZERO)
+		core = Sculpt.merge(core, eye,
+			Transform3D(Basis(), head_origin + Vector3(side * head_size * 0.315, head_size * 0.08, head_size * 0.44)))
 	core = MeshLib.with_tangents(core)
 
 	return {

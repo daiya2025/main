@@ -177,21 +177,31 @@ static func helmet(b: float) -> Array:
 	return a
 
 static func visor() -> Array:
-	# A thin emissive band across the brow, sitting just proud of the helmet.
+	# The face marker: a bold band across the brow, proud of the helmet. Big
+	# enough to read at gameplay distance — this is how you tell the front.
 	var center := Humanoid.HEAD_CENTER
-	var band := Sculpt.uv_sphere(Vector3(0.084, 0.016, 0.070), 14, 34)
+	var band := Sculpt.uv_sphere(Vector3(0.090, 0.026, 0.080), 14, 34)
 	band = Sculpt.project_uv_spherical(band, Vector3.ZERO)
-	# Sits across the brow, just proud of the helmet's face opening.
-	var a := Sculpt.merge(Humanoid._empty(), band, Transform3D(Basis(), center + Vector3(0, 0.052, 0.052)))
-	a = Sculpt.remove_region(a, center + Vector3(0, 0.052, -0.045), Vector3(0.11, 0.05, 0.075))
+	var a := Sculpt.merge(Humanoid._empty(), band, Transform3D(Basis(), center + Vector3(0, 0.050, 0.054)))
+	a = Sculpt.remove_region(a, center + Vector3(0, 0.050, -0.048), Vector3(0.12, 0.06, 0.080))
 	return a
 
 static func chest_emblem() -> Array:
 	# The DIGIHARI core: a glowing lens set into the sternum.
-	var lens := Sculpt.uv_sphere(Vector3(0.052, 0.052, 0.030), 16, 26)
+	var lens := Sculpt.uv_sphere(Vector3(0.062, 0.062, 0.034), 16, 26)
 	lens = Sculpt.project_uv_spherical(lens, Vector3.ZERO)
 	# Proud of the chest plate (which reaches ~z 0.16 over the sternum ridge).
-	return Sculpt.merge(Humanoid._empty(), lens, Transform3D(Basis(), Vector3(0, 1.300, 0.172)))
+	return Sculpt.merge(Humanoid._empty(), lens, Transform3D(Basis(), Vector3(0, 1.300, 0.176)))
+
+## Twin thruster lenses on the backpack: the glowing pair that says "this is
+## the back", mirroring the visor's "this is the front".
+static func thrusters() -> Array:
+	var a := Humanoid._empty()
+	for side in [1.0, -1.0]:
+		var lens := Sculpt.uv_sphere(Vector3(0.036, 0.048, 0.022), 14, 20)
+		lens = Sculpt.project_uv_spherical(lens, Vector3.ZERO)
+		a = Sculpt.merge(a, lens, Transform3D(Basis(), Vector3(side * 0.105, 1.255, -0.248)))
+	return a
 
 # ------------------------------------------------------------------- build --
 
@@ -217,11 +227,15 @@ static func build(cfg: Dictionary = {}) -> Dictionary:
 	armour = MeshLib.bake_cavity(armour, 1.0, 0.04)
 	armour = MeshLib.with_tangents(armour)
 
-	var trim := visor()
-	trim = Sculpt.merge(trim, chest_emblem())
+	var trim := chest_emblem()
+	trim = Sculpt.merge(trim, thrusters())
 	trim = Sculpt.project_uv_spherical(trim, Vector3(0, 1.4, 0), 3.0)
 	trim = MeshLib.bake_cavity(trim, 0.8, 0.03)
 	trim = MeshLib.with_tangents(trim)
+
+	var visor_band := visor()
+	visor_band = Sculpt.project_uv_spherical(visor_band, Humanoid.HEAD_CENTER, 3.0)
+	visor_band = MeshLib.with_tangents(visor_band)
 
 	return {
 		"bones": bones,
@@ -232,12 +246,14 @@ static func build(cfg: Dictionary = {}) -> Dictionary:
 			"eyes": figure["eyes"],
 			"armor": armour,
 			"trim": trim,
+			"visor": visor_band,
 		},
 		"stats": {
 			"body_tris": MeshLib.tri_count(figure["body"]),
 			"skin_tris": MeshLib.tri_count(figure["skin"]),
 			"armor_tris": MeshLib.tri_count(armour),
 			"trim_tris": MeshLib.tri_count(trim),
+			"visor_tris": MeshLib.tri_count(visor_band),
 			"bones": bones.size(),
 		},
 	}
@@ -257,7 +273,7 @@ static func create_node(cfg: Dictionary = {}) -> Node3D:
 	var state := {"built": null}
 	var groups := {}
 	var cache_ok := true
-	for group in ["body", "skin", "eyes", "armor", "trim"]:
+	for group in ["body", "skin", "eyes", "armor", "trim", "visor"]:
 		var key := "%s_%s" % [CACHE_KEY, group]
 		var mesh := BuildCache.mesh(key, func() -> Mesh:
 			if state["built"] == null:
@@ -281,6 +297,7 @@ static func create_node(cfg: Dictionary = {}) -> Node3D:
 		"eyes": Materials.eye(),
 		"armor": Materials.armor("primary"),
 		"trim": Materials.energy(Materials.ORANGE_EMISSIVE, 9.0),
+		"visor": Materials.energy(Materials.VISOR_COLOR, 13.0),
 	}
 
 	var skin_resource := skeleton.create_skin_from_rest_transforms()

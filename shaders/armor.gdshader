@@ -10,6 +10,11 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_sc
 group_uniforms Paint;
 uniform vec4 paint_color : source_color = vec4(0.905, 0.318, 0.031, 1.0);
 uniform vec4 paint_shadow : source_color = vec4(0.312, 0.086, 0.020, 1.0);
+// Rear plates drop to gunmetal so the character reads front/back at a glance;
+// front_split 0 disables the split (used by the dark and trim variants).
+uniform vec4 back_paint : source_color = vec4(0.13, 0.14, 0.17, 1.0);
+uniform vec4 back_shadow : source_color = vec4(0.05, 0.055, 0.07, 1.0);
+uniform float front_split : hint_range(0.0, 1.0) = 1.0;
 uniform vec4 flake_color : source_color = vec4(1.0, 0.72, 0.35, 1.0);
 uniform float flake_amount : hint_range(0.0, 1.0) = 0.35;
 uniform float paint_roughness : hint_range(0.0, 1.0) = 0.28;
@@ -76,7 +81,13 @@ void fragment() {
 	// Metallic flake sparkle in the basecoat.
 	float flake = smoothstep(0.72, 1.0, vnoise(p * 420.0));
 
-	vec3 paint = mix(paint_shadow.rgb, paint_color.rgb, clamp(v_cavity, 0.0, 1.0));
+	// Character space faces +Z; ease across the sides so the seam sits on the
+	// lateral line like a two-tone racing livery.
+	float front = smoothstep(-0.045, 0.055, v_object_pos.z);
+	front = mix(1.0, front, front_split);
+	vec3 base_col = mix(back_paint.rgb, paint_color.rgb, front);
+	vec3 shadow_col = mix(back_shadow.rgb, paint_shadow.rgb, front);
+	vec3 paint = mix(shadow_col, base_col, clamp(v_cavity, 0.0, 1.0));
 	paint = mix(paint, flake_color.rgb, flake * flake_amount);
 
 	ALBEDO = mix(paint, bare_metal.rgb, wear);

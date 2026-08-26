@@ -20,7 +20,7 @@ var _sky_material: ShaderMaterial = null
 ## Hours, 0-24. 17.0 puts the sun about 14 degrees up: still a raking, warm key
 ## with long shadows, but high enough that a street between 20-storey towers is
 ## readable. Below roughly 16.5 the district goes to silhouette.
-var time_of_day: float = 17.0
+var time_of_day: float = 16.3
 var day_length_seconds: float = 0.0    # 0 = frozen
 
 func _init(mood: String = "golden_hour") -> void:
@@ -57,7 +57,7 @@ func _init(mood: String = "golden_hour") -> void:
 	fill = DirectionalLight3D.new()
 	fill.name = "FillLight"
 	fill.light_color = Color(0.55, 0.68, 0.92)
-	fill.light_energy = 0.85
+	fill.light_energy = 1.05
 	fill.light_indirect_energy = 0.6
 	fill.shadow_enabled = false
 	fill.light_specular = 0.15
@@ -97,12 +97,12 @@ func _build_environment(mood: String) -> Environment:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 1.0
-	env.ambient_light_energy = 1.15
+	env.ambient_light_energy = 1.45
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 
 	# --- tonemapping -------------------------------------------------------
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 0.92
+	env.tonemap_exposure = 1.08
 	env.tonemap_white = 6.0
 
 	# --- global illumination ----------------------------------------------
@@ -137,13 +137,15 @@ func _build_environment(mood: String) -> Environment:
 	env.ssr_depth_tolerance = 0.24
 
 	# --- atmosphere --------------------------------------------------------
+	# Kept thin and colour-neutral: haze should carry light shafts, not paint
+	# the frame orange (feedback from the target machine).
 	env.volumetric_fog_enabled = true
-	env.volumetric_fog_density = 0.028
-	env.volumetric_fog_albedo = Color(0.86, 0.78, 0.72)
-	env.volumetric_fog_emission = Color(0.10, 0.055, 0.03)
-	env.volumetric_fog_emission_energy = 0.35
+	env.volumetric_fog_density = 0.010
+	env.volumetric_fog_albedo = Color(0.82, 0.84, 0.90)
+	env.volumetric_fog_emission = Color(0, 0, 0)
+	env.volumetric_fog_emission_energy = 0.0
 	env.volumetric_fog_gi_inject = 1.2
-	env.volumetric_fog_anisotropy = 0.32       # forward scattering = visible god rays
+	env.volumetric_fog_anisotropy = 0.25       # forward scattering = visible god rays
 	env.volumetric_fog_length = 160.0
 	env.volumetric_fog_detail_spread = 2.4
 	env.volumetric_fog_ambient_inject = 0.6
@@ -153,10 +155,10 @@ func _build_environment(mood: String) -> Environment:
 
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
-	env.fog_light_color = Color(0.62, 0.56, 0.52)
+	env.fog_light_color = Color(0.56, 0.58, 0.64)
 	env.fog_light_energy = 1.0
-	env.fog_sun_scatter = 0.35
-	env.fog_density = 0.0022
+	env.fog_sun_scatter = 0.10
+	env.fog_density = 0.0014
 	env.fog_sky_affect = 0.4
 	env.fog_height = -6.0
 	env.fog_height_density = 0.06
@@ -179,7 +181,7 @@ func _build_environment(mood: String) -> Environment:
 
 	# --- adjustments -------------------------------------------------------
 	env.adjustment_enabled = true
-	env.adjustment_brightness = 1.0
+	env.adjustment_brightness = 1.06
 	env.adjustment_contrast = 1.03
 	env.adjustment_saturation = 1.05
 
@@ -198,13 +200,13 @@ func apply_time_of_day(hours: float) -> void:
 	# Colour temperature drops hard as the sun approaches the horizon.
 	var horizon := clampf(1.0 - maxf(elevation, 0.0) / 22.0, 0.0, 1.0)
 	sun.light_color = Color(1.0, 0.92, 0.82).lerp(Color(1.0, 0.55, 0.24), horizon)
-	sun.light_energy = lerpf(4.4, 1.6, horizon)
+	sun.light_energy = lerpf(4.6, 2.4, horizon)
 	var night := clampf((-elevation) / 8.0, 0.0, 1.0)
 	sun.light_energy = lerpf(sun.light_energy, 0.05, night)
-	fill.light_energy = lerpf(0.85, 0.28, night)
-	environment.ambient_light_energy = lerpf(1.15, 0.40, night)
-	environment.volumetric_fog_density = lerpf(0.028, 0.045, horizon)
-	environment.tonemap_exposure = lerpf(0.92, 1.25, night)
+	fill.light_energy = lerpf(1.05, 0.32, night)
+	environment.ambient_light_energy = lerpf(1.45, 0.5, night)
+	environment.volumetric_fog_density = lerpf(0.010, 0.016, horizon)
+	environment.tonemap_exposure = lerpf(1.08, 1.3, night)
 	if _sky_material != null:
 		# The sun node is a direct child, so its local basis is world-space.
 		_sky_material.set_shader_parameter("sun_direction", -sun.transform.basis.z)
