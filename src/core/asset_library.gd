@@ -227,26 +227,57 @@ static func _noise(seed_value: int, freq: float, octaves: int, noise_type: int =
 	n.fractal_gain = 0.5
 	return n
 
+## Stand-in albedo. Composited from four seamless noise fields instead of a
+## single ramp: real surfaces carry colour processes at several scales — broad
+## patination, mid mottling, fine speckle and crack-like cell borders. The
+## noise fields render in C++ (get_seamless_image); GDScript only mixes them,
+## and the result is cached to disk so later launches skip the bake entirely.
 static func procedural_albedo(role: String, size: int = 1024) -> Texture2D:
 	var key := "alb_%s_%d" % [role, size]
 	if _procedural_cache.has(key):
 		return _procedural_cache[key]
+	var disk := "user://cache/%s_v2.png" % key
+	if FileAccess.file_exists(disk):
+		var cached := Image.load_from_file(ProjectSettings.globalize_path(disk))
+		if cached != null:
+			cached.generate_mipmaps()
+			var cached_tex := ImageTexture.create_from_image(cached)
+			_procedural_cache[key] = cached_tex
+			return cached_tex
+
 	var p := _profile(role)
 	var base: Color = p["albedo"]
 	var alt: Color = p["alt"]
-	var grad := Gradient.new()
-	grad.set_color(0, alt)
-	grad.set_color(1, base)
-	grad.add_point(0.45, alt.lerp(base, 0.35))
-	grad.add_point(0.78, base.lerp(Color.WHITE, 0.08))
-	var tex := NoiseTexture2D.new()
-	tex.width = size
-	tex.height = size
-	tex.seamless = true
-	tex.seamless_blend_skirt = 0.2
-	tex.generate_mipmaps = true
-	tex.color_ramp = grad
-	tex.noise = _noise(hash(role), float(p["freq"]) * float(size) / 12.0, int(p["octaves"]))
+	# a third hue rotated slightly off the base reads as patination
+	var accent := base.lerp(Color.from_hsv(fposmod(base.h + 0.06, 1.0), base.s * 0.8, base.v * 0.85), 0.85)
+
+	var freq := float(p["freq"])
+	var broad := _noise(hash(role), freq * 2.2, int(p["octaves"])).get_seamless_image(size, size)
+	var mid := _noise(hash(role) + 137, freq * 7.0, 4).get_seamless_image(size, size)
+	var fine := _noise(hash(role) + 613, freq * 26.0, 3).get_seamless_image(size, size)
+	var cell_noise := FastNoiseLite.new()
+	cell_noise.seed = hash(role) + 991
+	cell_noise.noise_type = FastNoiseLite.TYPE_CELLULAR
+	cell_noise.cellular_return_type = FastNoiseLite.RETURN_DISTANCE2_DIV
+	cell_noise.frequency = freq * 5.0
+	var cells := cell_noise.get_seamless_image(size, size)
+
+	var img := Image.create(size, size, false, Image.FORMAT_RGB8)
+	for y in size:
+		for x in size:
+			var b := broad.get_pixel(x, y).r
+			var m := mid.get_pixel(x, y).r
+			var f := fine.get_pixel(x, y).r
+			var c := 1.0 - cells.get_pixel(x, y).r
+			var col := alt.lerp(base, clampf(b * 0.75 + m * 0.35, 0.0, 1.0))
+			col = col.lerp(accent, smoothstep(0.55, 0.85, m) * 0.4)
+			col = col.darkened(smoothstep(0.6, 0.95, c) * 0.35)
+			col = col.lightened((f - 0.5) * 0.14)
+			img.set_pixel(x, y, col)
+	BuildCache.ensure_dir()
+	img.save_png(ProjectSettings.globalize_path(disk))
+	img.generate_mipmaps()
+	var tex := ImageTexture.create_from_image(img)
 	_procedural_cache[key] = tex
 	return tex
 

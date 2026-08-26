@@ -254,6 +254,8 @@ func _on_build_progress(stage: String, ratio: float) -> void:
 		"plaza": "中央広場を構築中...",
 		"props": "小物を配置中...",
 		"nature": "植生を散布中...",
+		"background": "遠景を描画中...",
+		"signage": "ネオンを点灯中...",
 		"hero": "デジハリマンを構築中...",
 		"creatures": "ノイズ体を生成中...",
 		"done": "起動しています...",

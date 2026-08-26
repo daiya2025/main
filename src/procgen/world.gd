@@ -44,6 +44,8 @@ static func build(root: Node3D, seed_value: int = 20250825) -> Dictionary:
 	Signals.world_build_progress.emit("nature", 0.9)
 	root.add_child(_nature(rng, stats))
 
+	root.add_child(_background(rng, stats))
+	root.add_child(_signage(rng, stats))
 	root.add_child(_bounds())
 	Signals.world_build_progress.emit("done", 1.0)
 	return stats
@@ -63,6 +65,8 @@ static func build_staged(root: Node3D, seed_value: int = 20250825) -> Dictionary
 		["plaza", 0.70, func() -> Node3D: return _plaza(rng, stats)],
 		["props", 0.80, func() -> Node3D: return _street_props(rng, stats)],
 		["nature", 0.90, func() -> Node3D: return _nature(rng, stats)],
+		["background", 0.94, func() -> Node3D: return _background(rng, stats)],
+		["signage", 0.97, func() -> Node3D: return _signage(rng, stats)],
 	]
 	for stage in stages:
 		Signals.world_build_progress.emit(String(stage[0]), float(stage[1]))
@@ -677,3 +681,154 @@ static func _bounds() -> StaticBody3D:
 		shape.position = wall[0]
 		body.add_child(shape)
 	return body
+
+# -------------------------------------------------------------- background --
+
+## The world beyond the playable district: a ring of distant tower silhouettes
+## with emissive window grids, far hills already come from the terrain, and an
+## atmosphere layer (drifting dust motes) that gives the air itself presence.
+static func _background(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
+	var node := Node3D.new()
+	node.name = "Background"
+
+	# --- distant skyline ---------------------------------------------------
+	# Boxes with a window-grid emission shader stand at 300-700 m where only
+	# silhouette and lit windows read. Three rings, staggered so gaps in one
+	# are covered by the next.
+	var tower_mesh := BoxMesh.new()
+	tower_mesh.size = Vector3(1, 1, 1)
+	var tower_material := ShaderMaterial.new()
+	tower_material.shader = load("res://shaders/skyline.gdshader")
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
+	mm.mesh = tower_mesh
+	var xforms: Array = []
+	for ring in 3:
+		var radius := 300.0 + float(ring) * 160.0
+		var count := 42 + ring * 18
+		for i in count:
+			var angle := TAU * float(i) / float(count) + rng.randf_range(-0.03, 0.03)
+			var w := rng.randf_range(18.0, 44.0) * (1.0 + float(ring) * 0.5)
+			var h := rng.randf_range(45.0, 190.0) * (1.0 + float(ring) * 0.25)
+			var d := rng.randf_range(18.0, 40.0) * (1.0 + float(ring) * 0.5)
+			var pos := Vector3(cos(angle) * radius, h * 0.5 - 4.0, sin(angle) * radius)
+			var basis := Basis(Vector3.UP, angle + PI * 0.5).scaled(Vector3(w, h, d))
+			xforms.append([Transform3D(basis, pos), rng.randf()])
+	mm.instance_count = xforms.size()
+	for i in xforms.size():
+		mm.set_instance_transform(i, xforms[i][0])
+		# custom.x seeds the window pattern, custom.y biases how lit it is
+		mm.set_instance_custom_data(i, Color(xforms[i][1], rng.randf_range(0.3, 1.0), 0, 0))
+	var mmi := MultiMeshInstance3D.new()
+	mmi.name = "Skyline"
+	mmi.multimesh = mm
+	mmi.material_override = tower_material
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mmi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+	mmi.ignore_occlusion_culling = true
+	mmi.custom_aabb = AABB(Vector3(-900, -50, -900), Vector3(1800, 500, 1800))
+	node.add_child(mmi)
+	stats["props"] = int(stats["props"]) + xforms.size()
+
+	# --- floating dust ------------------------------------------------------
+	# Always-on motes around the camera: the cheapest possible participating
+	# media, and the thing that makes light shafts and DOF feel inhabited.
+	var dust := GPUParticles3D.new()
+	dust.name = "Dust"
+	dust.amount = int(260 * Quality.particle_scale()) + 40
+	dust.lifetime = 9.0
+	dust.preprocess = 9.0
+	dust.emitting = true
+	dust.local_coords = false
+	var process := ParticleProcessMaterial.new()
+	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	process.emission_box_extents = Vector3(38.0, 9.0, 38.0)
+	process.direction = Vector3(0.4, 0.05, 0.2)
+	process.spread = 180.0
+	process.initial_velocity_min = 0.05
+	process.initial_velocity_max = 0.35
+	process.gravity = Vector3(0, -0.02, 0)
+	process.turbulence_enabled = true
+	process.turbulence_noise_strength = 0.35
+	process.turbulence_noise_scale = 0.6
+	process.scale_min = 0.15
+	process.scale_max = 0.5
+	process.color = Color(1.0, 0.85, 0.6, 0.05)
+	dust.process_material = process
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.05, 0.05)
+	dust.draw_pass_1 = quad
+	var dust_material := StandardMaterial3D.new()
+	dust_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	dust_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dust_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	dust_material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	dust_material.billboard_keep_scale = true
+	dust_material.vertex_color_use_as_albedo = true
+	dust_material.disable_receive_shadows = true
+	dust.material_override = dust_material
+	dust.custom_aabb = AABB(Vector3(-60, -12, -60), Vector3(120, 30, 120))
+	dust.position = Vector3(0, 6, 0)
+	node.add_child(dust)
+	return node
+
+## Neon signage on the buildings facing the plaza. Label3D renders through the
+## same SystemFont chain as the HUD, so the Japanese reads natively.
+static func _signage(rng: RandomNumberGenerator, stats: Dictionary) -> Node3D:
+	var node := Node3D.new()
+	node.name = "Signage"
+	const TEXTS := ["電脳", "デジハリ", "ノイズ警報", "第7区", "橙", "接続", "覚醒", "防衛線", "夜市", "回線"]
+	const COLORS := [
+		Color(1.0, 0.45, 0.10), Color(1.0, 0.30, 0.05), Color(0.25, 0.85, 1.0),
+		Color(1.0, 0.75, 0.25), Color(0.95, 0.2, 0.45),
+	]
+	var font := SystemFont.new()
+	font.font_names = PackedStringArray([
+		"Yu Gothic UI", "Meiryo UI", "Noto Sans CJK JP", "Noto Sans JP", "sans-serif"])
+	var half := float(GRID) * 0.5
+	var made := 0
+	for gx in GRID:
+		for gz in GRID:
+			var cx := (float(gx) - half + 0.5) * BLOCK
+			var cz := (float(gz) - half + 0.5) * BLOCK
+			var dist := Vector2(cx, cz).length()
+			if dist < ARENA_RADIUS + 8.0 or dist > BLOCK * 2.2 or rng.randf() > 0.55:
+				continue
+			var label := Label3D.new()
+			label.font = font
+			label.text = TEXTS[rng.randi() % TEXTS.size()]
+			label.font_size = rng.randi_range(220, 420)
+			label.pixel_size = 0.01
+			var color: Color = COLORS[rng.randi() % COLORS.size()]
+			label.modulate = color
+			label.outline_modulate = Color(color, 0.4)
+			label.outline_size = 24
+			# Vertical signage on some, horizontal on the rest.
+			if rng.randf() < 0.5:
+				label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				var chars := label.text.split("")
+				label.text = "\n".join(chars)
+			# face the plaza from the block's inner corner
+			var toward := -Vector2(cx, cz).normalized()
+			var offset := Vector2(cx, cz) + toward * (BLOCK - STREET) * 0.45
+			label.position = Vector3(offset.x, rng.randf_range(9.0, 26.0), offset.y)
+			label.rotation.y = atan2(toward.x, toward.y)
+			label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+			label.shaded = false
+			label.double_sided = true
+			node.add_child(label)
+			# a matching light spills the sign colour onto the facade behind it
+			if made % 2 == 0:
+				var glow := OmniLight3D.new()
+				glow.light_color = color
+				glow.light_energy = 3.2
+				glow.omni_range = 10.0
+				glow.position = label.position + Vector3(0, 0, 0)
+				glow.shadow_enabled = false
+				glow.light_volumetric_fog_energy = 1.6
+				node.add_child(glow)
+				stats["lights"] = int(stats["lights"]) + 1
+			made += 1
+	stats["props"] = int(stats["props"]) + made
+	return node

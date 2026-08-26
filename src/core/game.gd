@@ -7,6 +7,7 @@ var combo_timer: float = 0.0
 var wave_index: int = 0
 var enemies_alive: int = 0
 var photo_mode: bool = false
+var demo_mode: bool = false
 var player: Node3D = null
 
 const COMBO_WINDOW := 2.6

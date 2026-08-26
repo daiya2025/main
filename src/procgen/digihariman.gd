@@ -25,11 +25,11 @@ static func chest_plate(b: float) -> Array:
 		Vector3(0, 1.432, -0.012),
 	])
 	var keys := [
-		[0.00, 0.168 * b, 0.128 * b, 2.45],
-		[0.30, 0.192 * b, 0.140 * b, 2.60],
-		[0.62, 0.208 * b, 0.145 * b, 2.75],
-		[0.88, 0.214 * b, 0.134 * b, 2.90],
-		[1.00, 0.176 * b, 0.116 * b, 2.70],
+		[0.00, 0.158 * b, 0.124 * b, 2.45],
+		[0.30, 0.174 * b, 0.136 * b, 2.60],
+		[0.62, 0.185 * b, 0.141 * b, 2.75],
+		[0.88, 0.188 * b, 0.130 * b, 2.90],
+		[1.00, 0.162 * b, 0.112 * b, 2.70],
 	]
 	var a := _wrap(control, keys, 34, 6)
 	# sternum ridge and pectoral shells
@@ -45,17 +45,17 @@ static func chest_plate(b: float) -> Array:
 
 static func pauldron(b: float) -> Array:
 	# Left shoulder. A shell that sweeps from the collar out over the deltoid.
-	var shell := Sculpt.uv_sphere(Vector3(0.115 * b, 0.100 * b, 0.115 * b), 22, 30)
+	var shell := Sculpt.uv_sphere(Vector3(0.092 * b, 0.082 * b, 0.096 * b), 22, 30)
 	shell = Sculpt.project_uv_spherical(shell, Vector3.ZERO)
-	var a := Sculpt.merge(Humanoid._empty(), shell, Transform3D(Basis(), Vector3(0.186, 1.396, 0.000)))
-	a = Sculpt.scale_region(a, Vector3(0.186, 1.330, 0.0), Vector3(0.20, 0.12, 0.20), Vector3(1.0, 0.55, 1.0), 0.8)
-	a = Sculpt.blob(a, Vector3(0.238, 1.372, 0.000), Vector3(0.075, 0.075, 0.090), 0.018, Vector3(1, -0.15, 0).normalized(), 1.1)
+	var a := Sculpt.merge(Humanoid._empty(), shell, Transform3D(Basis(), Vector3(0.198, 1.408, 0.000)))
+	a = Sculpt.scale_region(a, Vector3(0.198, 1.350, 0.0), Vector3(0.17, 0.10, 0.17), Vector3(1.0, 0.55, 1.0), 0.8)
+	a = Sculpt.blob(a, Vector3(0.240, 1.388, 0.000), Vector3(0.062, 0.062, 0.075), 0.014, Vector3(1, -0.15, 0).normalized(), 1.1)
 	# layered lames along the lower edge
 	for i in 3:
-		var y := 1.352 - float(i) * 0.028
-		a = Sculpt.crease(a, Vector3(0.20, y, 0.0), Vector3(0, 1, 0), 0.008, 0.006,
-			Vector3(0.205, y, 0.0), Vector3(0.13, 0.020, 0.13))
-	a = Sculpt.flatten_below(a, 1.290, 0.02)
+		var y := 1.372 - float(i) * 0.024
+		a = Sculpt.crease(a, Vector3(0.21, y, 0.0), Vector3(0, 1, 0), 0.007, 0.005,
+			Vector3(0.212, y, 0.0), Vector3(0.11, 0.018, 0.11))
+	a = Sculpt.flatten_below(a, 1.330, 0.02)
 	return a
 
 static func gauntlet(b: float) -> Array:
@@ -85,10 +85,10 @@ static func thigh_guard(b: float) -> Array:
 		Vector3(0.099, 0.600, 0.012),
 	])
 	var keys := [
-		[0.00, 0.126 * b, 0.126 * b, 2.55],
-		[0.40, 0.116 * b, 0.118 * b, 2.50],
-		[0.80, 0.100 * b, 0.104 * b, 2.45],
-		[1.00, 0.090 * b, 0.094 * b, 2.45],
+		[0.00, 0.116 * b, 0.116 * b, 2.55],
+		[0.40, 0.107 * b, 0.109 * b, 2.50],
+		[0.80, 0.094 * b, 0.098 * b, 2.45],
+		[1.00, 0.086 * b, 0.090 * b, 2.45],
 	]
 	var a := _wrap(control, keys, 24, 6)
 	a = Sculpt.blob(a, Vector3(0.098, 0.760, 0.100), Vector3(0.060, 0.100, 0.040), 0.010, Vector3(0, 0, 1), 1.2)
@@ -104,10 +104,10 @@ static func shin_guard(b: float) -> Array:
 		Vector3(0.100, 0.170, -0.012),
 	])
 	var keys := [
-		[0.00, 0.088 * b, 0.090 * b, 2.55],
-		[0.30, 0.092 * b, 0.094 * b, 2.50],
-		[0.75, 0.066 * b, 0.070 * b, 2.45],
-		[1.00, 0.058 * b, 0.062 * b, 2.45],
+		[0.00, 0.082 * b, 0.084 * b, 2.55],
+		[0.30, 0.086 * b, 0.088 * b, 2.50],
+		[0.75, 0.063 * b, 0.067 * b, 2.45],
+		[1.00, 0.056 * b, 0.060 * b, 2.45],
 	]
 	var a := _wrap(control, keys, 22, 6)
 	a = Sculpt.blob(a, Vector3(0.100, 0.500, 0.070), Vector3(0.055, 0.050, 0.040), 0.012, Vector3(0, 0.3, 1).normalized(), 1.2)  # knee cop
@@ -133,9 +133,9 @@ static func belt(b: float) -> Array:
 		Vector3(0, 1.028, 0.008),
 	])
 	var keys := [
-		[0.00, 0.176 * b, 0.136 * b, 2.60],
-		[0.5, 0.182 * b, 0.142 * b, 2.65],
-		[1.00, 0.172 * b, 0.132 * b, 2.60],
+		[0.00, 0.163 * b, 0.130 * b, 2.60],
+		[0.5, 0.168 * b, 0.135 * b, 2.65],
+		[1.00, 0.159 * b, 0.126 * b, 2.60],
 	]
 	var a := _wrap(control, keys, 30, 6, 3.0)
 	a = Sculpt.blob(a, Vector3(0, 0.992, 0.150), Vector3(0.055, 0.040, 0.040), 0.016, Vector3(0, 0, 1), 1.2)   # buckle

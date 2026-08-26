@@ -34,6 +34,7 @@ func _process(_delta: float) -> bool:
 		2:
 			_stage = 3
 			_run_combat_checks()
+			_test_demo_reel()
 			_report()
 			return true
 	return false
@@ -188,7 +189,7 @@ func _test_shaders() -> void:
 		var uniforms := shader.get_shader_uniform_list()
 		_check(uniforms.size() > 0, "%s compiles (%d uniforms)" % [f, uniforms.size()])
 		count += 1
-	_check(count >= 12, "all %d shaders checked" % count)
+	_check(count >= 14, "all %d shaders checked" % count)
 
 func _test_monsters() -> void:
 	print("-- Monsters")
@@ -449,3 +450,34 @@ func _run_combat_checks() -> void:
 	_check(int(_game.get("score")) > 0, "score awarded on kill")
 	monster.call("take_damage", 10.0, monster.global_position, Vector3.FORWARD, false)
 	_check(_died_events.size() == 1, "corpse takes no further death events")
+
+func _test_demo_reel() -> void:
+	print("-- Demo reel")
+	var main_stub := Node3D.new()
+	root.add_child(main_stub)
+	var demo_script: GDScript = load("res://src/core/demo_director.gd")
+	var demo: Node = demo_script.new(main_stub)
+	main_stub.add_child(demo)
+
+	# The reel must cover the full 60 seconds with a finite camera transform at
+	# every sampled instant, and the cuts must land where the reel says.
+	var expected := {0.0: "establish", 12.0: "street", 25.0: "hero",
+		40.0: "combat", 50.0: "low", 57.0: "outro"}
+	var all_finite := true
+	for t in range(0, 61):
+		demo.call("seek", float(t))
+		var cam := demo.get_node("DemoCamera") as Camera3D
+		var o := cam.transform.origin
+		if is_nan(o.x) or is_nan(o.y) or is_nan(o.z) or o.length() > 500.0:
+			all_finite = false
+			printerr("     bad camera at t=%d: %s" % [t, o])
+	_check(all_finite, "camera finite across 61 sampled seconds")
+	var cuts_ok := true
+	for t in expected.keys():
+		var got := String(demo.call("shot_name_at", float(t)))
+		if got != String(expected[t]):
+			cuts_ok = false
+			printerr("     t=%.0f expected %s got %s" % [t, expected[t], got])
+	_check(cuts_ok, "cut points land on the intended shots")
+	_check(float(demo.get("DURATION")) == 60.0, "reel is exactly 60 seconds")
+	main_stub.queue_free()

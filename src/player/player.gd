@@ -41,6 +41,16 @@ var alive: bool = true
 var camera_rig: CameraRig
 var lock_on_target: Node3D = null
 
+## Attract-mode drive: when enabled, the DemoDirector writes this intent each
+## physics frame and the input-reading paths below consult it instead of the
+## real devices. Kept as data (not calls into the player) so the whole combat
+## stack runs identically under the bot.
+var bot_enabled: bool = false
+var bot_input: Dictionary = {"move": Vector3.ZERO, "attack": false, "special": false, "dash": false, "sprint": false}
+var _bot_attack_edge: bool = false
+var _bot_dash_edge: bool = false
+var _bot_special_edge: bool = false
+
 var _model: Node3D
 var _skeleton: Skeleton3D
 var _animator: HumanoidAnimator
@@ -125,6 +135,9 @@ func _physics_process(delta: float) -> void:
 	_update_animation(delta, wish)
 
 func _wish_direction() -> Vector3:
+	if bot_enabled:
+		var move: Vector3 = bot_input.get("move", Vector3.ZERO)
+		return Vector3(move.x, 0.0, move.z).limit_length(1.0)
 	var input := Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_forward", "move_back"))
@@ -144,7 +157,8 @@ func _process_move(delta: float, wish: Vector3) -> void:
 	else:
 		_air_jumps = AIR_JUMPS
 
-	var sprinting := Input.is_action_pressed("sprint") and wish.length() > 0.5 and _combo_index < 0
+	var sprinting := (bool(bot_input.get("sprint", false)) if bot_enabled else Input.is_action_pressed("sprint")) \
+		and wish.length() > 0.5 and _combo_index < 0
 	var top_speed := WALK_SPEED
 	if wish.length() > 0.6:
 		top_speed = SPRINT_SPEED if sprinting else RUN_SPEED
@@ -162,7 +176,7 @@ func _process_move(delta: float, wish: Vector3) -> void:
 	velocity.x = planar.x
 	velocity.z = planar.z
 
-	if Input.is_action_just_pressed("jump"):
+	if not bot_enabled and Input.is_action_just_pressed("jump"):
 		if is_on_floor():
 			velocity.y = JUMP_VELOCITY
 			Signals.camera_fov_kick_requested.emit(1.5, 0.2)
@@ -174,10 +188,10 @@ func _process_move(delta: float, wish: Vector3) -> void:
 			Signals.camera_fov_kick_requested.emit(2.2, 0.2)
 			Signals.sfx_requested.emit("jump", global_position)
 
-	if Input.is_action_just_pressed("dash") and _dash_cooldown <= 0.0:
+	if _pressed_dash() and _dash_cooldown <= 0.0:
 		_start_dash(wish)
 
-	if Input.is_action_just_pressed("special") and energy >= BOLT_COST and _cast_time <= 0.0:
+	if _pressed_special() and energy >= BOLT_COST and _cast_time <= 0.0:
 		_cast_bolt()
 	_cast_time = maxf(0.0, _cast_time - delta)
 
@@ -235,8 +249,33 @@ func _cast_bolt() -> void:
 
 # ------------------------------------------------------------------ combat --
 
+## Edge detection for the bot flags, mirroring is_action_just_pressed.
+func _pressed_attack() -> bool:
+	if not bot_enabled:
+		return Input.is_action_just_pressed("attack")
+	var now := bool(bot_input.get("attack", false))
+	var edge := now and not _bot_attack_edge
+	_bot_attack_edge = now
+	return edge
+
+func _pressed_dash() -> bool:
+	if not bot_enabled:
+		return Input.is_action_just_pressed("dash")
+	var now := bool(bot_input.get("dash", false))
+	var edge := now and not _bot_dash_edge
+	_bot_dash_edge = now
+	return edge
+
+func _pressed_special() -> bool:
+	if not bot_enabled:
+		return Input.is_action_just_pressed("special")
+	var now := bool(bot_input.get("special", false))
+	var edge := now and not _bot_special_edge
+	_bot_special_edge = now
+	return edge
+
 func _process_attack(delta: float) -> void:
-	if Input.is_action_just_pressed("attack"):
+	if _pressed_attack():
 		if _combo_index < 0 and _dash_time <= 0.0:
 			_begin_attack(0)
 		else:

@@ -15,6 +15,7 @@ var world_environment: WorldEnvironment
 var sun: DirectionalLight3D
 var fill: DirectionalLight3D
 var environment: Environment
+var _sky_material: ShaderMaterial = null
 
 ## Hours, 0-24. 17.0 puts the sun about 14 degrees up: still a raking, warm key
 ## with long shadows, but high enough that a street between 20-storey towers is
@@ -86,19 +87,11 @@ func _build_environment(mood: String) -> Environment:
 		pano.energy_multiplier = 1.0
 		sky.sky_material = pano
 	else:
-		# A physically-shaped procedural sky stands in until an HDRI is fetched.
-		var proc := ProceduralSkyMaterial.new()
-		proc.sky_top_color = Color(0.10, 0.19, 0.36)
-		proc.sky_horizon_color = Color(0.72, 0.53, 0.36)
-		proc.sky_curve = 0.13
-		proc.sky_energy_multiplier = 1.0
-		proc.ground_bottom_color = Color(0.055, 0.050, 0.048)
-		proc.ground_horizon_color = Color(0.40, 0.31, 0.24)
-		proc.ground_curve = 0.04
-		proc.sun_angle_max = 8.0
-		proc.sun_curve = 0.08
-		proc.use_debanding = true
-		sky.sky_material = proc
+		# The layered custom sky: gradient + sun + two FBM cloud decks + stars
+		# + horizon city glow. Drives GI/reflections through the radiance map.
+		_sky_material = ShaderMaterial.new()
+		_sky_material.shader = load("res://shaders/sky.gdshader")
+		sky.sky_material = _sky_material
 
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
@@ -212,4 +205,9 @@ func apply_time_of_day(hours: float) -> void:
 	environment.ambient_light_energy = lerpf(1.15, 0.40, night)
 	environment.volumetric_fog_density = lerpf(0.028, 0.045, horizon)
 	environment.tonemap_exposure = lerpf(0.92, 1.25, night)
+	if _sky_material != null:
+		# The sun node is a direct child, so its local basis is world-space.
+		_sky_material.set_shader_parameter("sun_direction", -sun.transform.basis.z)
+		_sky_material.set_shader_parameter("day_night", night)
+		_sky_material.set_shader_parameter("horizon_warmth", horizon)
 	time_of_day_changed.emit(hours)

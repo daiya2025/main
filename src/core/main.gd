@@ -11,6 +11,7 @@ var hud: HUD
 var world_root: Node3D
 var world_stats: Dictionary = {}
 
+var demo: DemoDirector
 var _wave_timer: float = 0.0
 var _wave_active: bool = false
 var _ready_to_play: bool = false
@@ -60,6 +61,9 @@ func _boot() -> void:
 	add_child(camera_rig)
 	player.camera_rig = camera_rig
 
+	demo = DemoDirector.new(self)
+	add_child(demo)
+
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	Audio.start_ambience(Vector3(0, 11, 0))
 	Signals.world_build_finished.emit()
@@ -70,6 +74,9 @@ func _boot() -> void:
 
 	_ready_to_play = true
 	_wave_timer = 2.5
+	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
+	if args.has("--demo"):
+		demo.start(args.has("--kiosk"))
 
 func _process(delta: float) -> void:
 	if not _ready_to_play:
@@ -141,6 +148,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_tree().paused = Game.photo_mode
 		Signals.photo_mode_toggled.emit(Game.photo_mode)
 		Signals.toast.emit("フォトモード: %s" % ("ON" if Game.photo_mode else "OFF"), 2.0)
+	elif event is InputEventKey and (event as InputEventKey).pressed \
+			and (event as InputEventKey).physical_keycode == KEY_F9:
+		if demo != null and not demo.active:
+			demo.start()
 	elif event.is_action_pressed("screenshot"):
 		_save_screenshot()
 	elif event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_R:
