@@ -116,6 +116,28 @@ static func energy(color: Color = ORANGE_EMISSIVE, intensity: float = 8.0) -> Sh
 	mat.set_shader_parameter("intensity", intensity)
 	return mat
 
+## Opaque emissive: for glowing SOLIDS (the blade) that must stay readable
+## against bright backgrounds — additive energy washes out over a sunlit
+## surface, which is exactly where a sword spends its life.
+static func emissive_solid(color: Color, energy: float = 5.0) -> StandardMaterial3D:
+	var key := "emis_%s_%0.1f" % [color.to_html(false), energy]
+	if _cache.has(key):
+		return _cache[key]
+	var mat := StandardMaterial3D.new()
+	# Near-black albedo: the glow IS the surface. A lit albedo washes the
+	# emission toward tan under a strong key light.
+	mat.albedo_color = Color(0.05, 0.02, 0.01)
+	mat.emission_enabled = true
+	mat.emission = color
+	mat.emission_energy_multiplier = energy
+	mat.roughness = 0.25
+	mat.metallic = 0.0
+	mat.rim_enabled = true
+	mat.rim = 0.4
+	mat.rim_tint = 0.6
+	_cache[key] = mat
+	return mat
+
 static func carapace(rage: float = 0.0) -> ShaderMaterial:
 	var mat := _make(CARAPACE, "carapace")
 	mat.set_shader_parameter("vein_color", ORANGE_EMISSIVE)

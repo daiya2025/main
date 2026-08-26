@@ -240,15 +240,15 @@ static func build_weapon_meshes() -> Dictionary:
 	# blade: flat lobed section, gentle back-curve, hard taper to the point
 	var spine := PackedVector3Array([
 		Vector3(0, 0.085, 0.006),
-		Vector3(0, 0.36, 0.012),
-		Vector3(0, 0.66, 0.004),
-		Vector3(0, 0.90, -0.012),
+		Vector3(0, 0.42, 0.014),
+		Vector3(0, 0.78, 0.004),
+		Vector3(0, 1.06, -0.016),
 	])
 	var blade := MeshLib.tube(spine,
-		[[0.00, 0.012, 0.038, 1.7],
-		 [0.30, 0.010, 0.044, 1.6],
-		 [0.72, 0.008, 0.036, 1.6],
-		 [0.94, 0.004, 0.016, 1.7],
+		[[0.00, 0.015, 0.056, 1.7],
+		 [0.30, 0.013, 0.064, 1.6],
+		 [0.72, 0.010, 0.050, 1.6],
+		 [0.94, 0.006, 0.022, 1.7],
 		 [1.00, 0.001, 0.002, 1.8]],
 		14, 6, PackedFloat32Array(), true, true, 1.2)
 	blade = MeshLib.with_tangents(blade)
@@ -273,7 +273,8 @@ static func attach_weapon(skeleton: Skeleton3D) -> BoneAttachment3D:
 	weapon.name = "EnergyBlade"
 	# grip sits in the palm; a slight forward cant so idle carry looks ready
 	weapon.position = Vector3(0, -0.035, 0.01)
-	weapon.rotation = Vector3(-0.28, 0.0, 0.10)
+	# canted forward and away from the body so the idle carry clears the thigh
+	weapon.rotation = Vector3(-0.38, 0.0, 0.30)
 	attachment.add_child(weapon)
 
 	var hilt_mi := MeshInstance3D.new()
@@ -282,7 +283,8 @@ static func attach_weapon(skeleton: Skeleton3D) -> BoneAttachment3D:
 	weapon.add_child(hilt_mi)
 	var blade_mi := MeshInstance3D.new()
 	blade_mi.mesh = meshes["blade"]
-	blade_mi.material_override = Materials.energy(Materials.ORANGE_HOT, 15.0)
+	# 3.5x keeps the hue orange after tonemapping; higher clips to white.
+	blade_mi.material_override = Materials.emissive_solid(Materials.ORANGE_HOT, 3.5)
 	blade_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	weapon.add_child(blade_mi)
 	return attachment
