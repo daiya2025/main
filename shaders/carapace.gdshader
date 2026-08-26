@@ -109,7 +109,8 @@ void fragment() {
 	vec2 vein_cells = cells(p + vec3(3.1, 0.0, 7.7), vein_scale);
 	float vein = 1.0 - smoothstep(0.0, 0.09, vein_cells.y - vein_cells.x);
 	float pulse = 0.55 + 0.45 * sin(TIME * pulse_speed - p.y * 4.0);
-	EMISSION = vein_color.rgb * vein * vein_emission * pulse * (0.25 + 0.75 * rage) * (1.0 - seam * 0.4);
+	// Idle veins smoulder; the flood to full brightness is the rage telegraph.
+	EMISSION = vein_color.rgb * vein * vein_emission * pulse * (0.10 + 0.90 * rage) * (1.0 - seam * 0.4);
 
 	AO = v_cavity;
 	AO_LIGHT_AFFECT = 0.8;

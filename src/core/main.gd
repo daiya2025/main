@@ -141,9 +141,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_tree().paused = Game.photo_mode
 		Signals.photo_mode_toggled.emit(Game.photo_mode)
 		Signals.toast.emit("フォトモード: %s" % ("ON" if Game.photo_mode else "OFF"), 2.0)
+	elif event.is_action_pressed("screenshot"):
+		_save_screenshot()
 	elif event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_R:
 		if player != null and not player.alive:
 			_restart()
+
+func _save_screenshot() -> void:
+	var dir := "user://screenshots"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
+	var stamp := Time.get_datetime_string_from_system().replace(":", "-")
+	var path := "%s/digihariman_%s.png" % [dir, stamp]
+	var image := get_viewport().get_texture().get_image()
+	image.save_png(path)
+	Signals.toast.emit("スクリーンショット保存: %s" % path.get_file(), 2.5)
+	Signals.sfx_requested.emit("toast", Vector3.INF)
 
 func _restart() -> void:
 	get_tree().paused = false
