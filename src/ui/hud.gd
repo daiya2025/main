@@ -58,8 +58,11 @@ func _ready() -> void:
 	_numbers.name = "DamageNumbers"
 	add_child(_numbers)
 	_build_death_overlay()
+	_build_cinema()
 
 	Signals.player_died.connect(_show_death_overlay)
+	Signals.demo_mode_changed.connect(_on_demo_mode)
+	Signals.demo_outro.connect(_on_demo_outro)
 	Signals.player_health_changed.connect(func(c: float, m: float) -> void:
 		if c < _health_ratio * m:
 			_hit_flash = 1.0
@@ -206,6 +209,90 @@ func _build_loading() -> void:
 	add_child(_loading)
 
 var _death: Control = null
+var _cinema: Control = null
+var _bar_top: ColorRect = null
+var _bar_bottom: ColorRect = null
+var _title_card: VBoxContainer = null
+
+## Letterbox bars and the outro title card for the attract mode. Gameplay HUD
+## hides while the reel runs — a demo frame should look like a trailer, not a
+## play session with debug chrome on it.
+func _build_cinema() -> void:
+	_cinema = Control.new()
+	_cinema.name = "Cinema"
+	_cinema.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_cinema.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bar_top = ColorRect.new()
+	_bar_top.color = Color.BLACK
+	_bar_top.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_bar_top.anchor_bottom = 0.0
+	_bar_top.offset_bottom = 0.0
+	_cinema.add_child(_bar_top)
+	_bar_bottom = ColorRect.new()
+	_bar_bottom.color = Color.BLACK
+	_bar_bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_bar_bottom.anchor_top = 1.0
+	_bar_bottom.offset_top = 0.0
+	_cinema.add_child(_bar_bottom)
+
+	_title_card = VBoxContainer.new()
+	_title_card.set_anchors_preset(Control.PRESET_CENTER)
+	_title_card.position = Vector2(-320, -70)
+	_title_card.custom_minimum_size = Vector2(640, 140)
+	_title_card.add_theme_constant_override("separation", 8)
+	var title := Label.new()
+	title.add_theme_font_override("font", font)
+	title.add_theme_font_size_override("font_size", 58)
+	title.add_theme_color_override("font_color", ORANGE)
+	title.text = "DIGIHARIMAN"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title_card.add_child(title)
+	var sub := Label.new()
+	sub.add_theme_font_override("font", font)
+	sub.add_theme_font_size_override("font_size", 20)
+	sub.add_theme_color_override("font_color", WHITE)
+	sub.text = "ORANGE PROTOCOL"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title_card.add_child(sub)
+	var hint := Label.new()
+	hint.add_theme_font_override("font", font)
+	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_color_override("font_color", Color(0.7, 0.68, 0.66))
+	hint.text = "任意のキーで開始"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title_card.add_child(hint)
+	_title_card.modulate.a = 0.0
+	_title_card.hide()
+	_cinema.add_child(_title_card)
+	_cinema.hide()
+	add_child(_cinema)
+
+func _on_demo_mode(active: bool) -> void:
+	_bars.visible = not active and _visible_hud
+	_center.visible = not active and _visible_hud
+	_help.visible = not active and _help_countdown > 0.0
+	_cinema.visible = active
+	if active:
+		var height := get_viewport().get_visible_rect().size.y * 0.11
+		_bar_top.offset_bottom = 0.0
+		_bar_bottom.offset_top = 0.0
+		var tween := create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(_bar_top, "offset_bottom", height, 0.9).set_ease(Tween.EASE_OUT)
+		tween.tween_property(_bar_bottom, "offset_top", -height, 0.9).set_ease(Tween.EASE_OUT)
+	else:
+		_title_card.hide()
+
+func _on_demo_outro(active: bool) -> void:
+	if _title_card == null:
+		return
+	if active:
+		_title_card.show()
+		_title_card.modulate.a = 0.0
+		var tween := create_tween()
+		tween.tween_property(_title_card, "modulate:a", 1.0, 1.4)
+	else:
+		_title_card.hide()
 
 func _build_death_overlay() -> void:
 	_death = ColorRect.new()

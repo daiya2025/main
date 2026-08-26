@@ -24,6 +24,8 @@ signal camera_fov_kick_requested(amount: float, duration: float)
 
 signal quality_changed(preset_name: String)
 signal photo_mode_toggled(active: bool)
+signal demo_mode_changed(active: bool)
+signal demo_outro(active: bool)
 signal toast(text: String, seconds: float)
 
 signal sfx_requested(name: String, world_pos: Vector3)

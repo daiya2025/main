@@ -3,7 +3,7 @@ extends SceneTree
 var frames := 0
 var started := false
 var shot_index := 0
-const SAMPLES := [4.0, 15.0, 26.0, 50.0, 57.0]
+const SAMPLES := [5.0, 36.0, 57.0]
 
 func _initialize() -> void:
 	root.content_scale_size = Vector2i(640, 360)
@@ -29,7 +29,7 @@ func _process(_d: float) -> bool:
 	if settle % 3 != 0:
 		demo.call("seek", SAMPLES[shot_index])
 		return false
-	var tag := "d%02d" % int(SAMPLES[shot_index])
+	var tag := "e%02d" % int(SAMPLES[shot_index])
 	root.get_texture().get_image().save_png("user://demo_%s.png" % tag)
 	print("shot %s (%s)" % [tag, demo.call("shot_name_at", SAMPLES[shot_index])])
 	shot_index += 1

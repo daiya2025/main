@@ -53,9 +53,11 @@ func _build_reel() -> void:
 	_shots = [
 		# 0-10 s: high establishing orbit over the district, monolith centred.
 		[0.0, "establish", func(t: float, _T: float) -> Transform3D:
+			# Stays above the tallest towers (~75 m) for the whole move, so the
+			# orbit never clips through a rooftop.
 			var angle := lerpf(-0.4, 0.9, t)
-			var radius := lerpf(95.0, 62.0, t)
-			var height := lerpf(58.0, 30.0, t)
+			var radius := lerpf(128.0, 92.0, t)
+			var height := lerpf(88.0, 52.0, t)
 			return _look(Vector3(cos(angle) * radius, height, sin(angle) * radius), Vector3(0, 9, 0))],
 		# 10-20 s: low crane through a street toward the plaza.
 		[10.0, "street", func(t: float, _T: float) -> Transform3D:
@@ -109,7 +111,7 @@ func start(loop_forever: bool = false) -> void:
 	set_process(true)
 	set_physics_process(true)
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	Signals.toast.emit("DEMO — 任意のキーで操作に戻る", 4.0)
+	Signals.demo_mode_changed.emit(true)
 
 func stop() -> void:
 	if not active:
@@ -125,13 +127,24 @@ func stop() -> void:
 	if rig != null:
 		rig.camera().current = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	Signals.demo_outro.emit(false)
+	Signals.demo_mode_changed.emit(false)
 	demo_finished.emit()
 
 ## Places the camera (and bot clock) at an arbitrary demo time — used by the
 ## screenshot tests to sample the reel without playing 60 real-time seconds.
 func seek(to_time: float) -> void:
 	time = clampf(to_time, 0.0, DURATION)
+	_update_outro()
 	_apply_camera()
+
+var _outro_shown := false
+
+func _update_outro() -> void:
+	var in_outro := time >= 52.0
+	if in_outro != _outro_shown:
+		_outro_shown = in_outro
+		Signals.demo_outro.emit(in_outro)
 
 func shot_name_at(t: float) -> String:
 	var current: Array = _shots[0]
@@ -157,9 +170,12 @@ func _process(delta: float) -> void:
 	if time >= DURATION:
 		if kiosk:
 			time = 0.0
+			_outro_shown = false
+			Signals.demo_outro.emit(false)
 		else:
 			stop()
 			return
+	_update_outro()
 	_apply_camera()
 
 func _physics_process(delta: float) -> void:
