@@ -9,6 +9,8 @@ extends Node
 ## shoulders counter-rotate against the hips, the arms swing out of phase with
 ## the legs, and the whole torso leans into acceleration.
 
+signal footstep(side: String)
+
 const STANCE_RATIO := 0.62          # fraction of the cycle a foot is planted
 const BASE_STRIDE := 0.92           # metres at 1 m/s, scaled by speed
 const MAX_STRIDE := 2.35
@@ -195,11 +197,17 @@ func _foot_target(side: float, t: float, stride: float) -> Vector3:
 	var travel := direction * offset
 	return base + Vector3(travel.x + lateral, height, travel.z)
 
+var _prev_leg_t := {"L": 0.0, "R": 0.5}
+
 func _legs_walk(stride: float) -> void:
 	var walking := speed > 0.15
 	for side_name in ["L", "R"]:
 		var side := 1.0 if side_name == "L" else -1.0
 		var t := fposmod(_phase + (0.0 if side_name == "L" else 0.5), 1.0)
+		# Swing -> stance transition = heel strike.
+		if walking and float(_prev_leg_t[side_name]) > STANCE_RATIO and t < STANCE_RATIO:
+			footstep.emit(side_name)
+		_prev_leg_t[side_name] = t
 		var target := _foot_target(side, t, stride) if walking else Vector3(side * 0.100, 0.092, -0.018)
 		if not walking:
 			# idle weight shift so the pose is never perfectly symmetrical

@@ -20,6 +20,7 @@ Signals="*res://src/core/signals.gd"
 Settings="*res://src/core/settings.gd"
 Quality="*res://src/core/quality.gd"
 Game="*res://src/core/game.gd"
+Audio="*res://src/audio/audio_director.gd"
 
 [display]
 

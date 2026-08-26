@@ -9,6 +9,7 @@ var _stage: int = 0
 func _initialize() -> void:
 	print("== DIGIHARIMAN smoke test ==")
 	_test_polyhaven_planner()
+	_test_audio()
 	_test_shaders()
 	_test_mesh_lib()
 	_test_humanoid()
@@ -323,3 +324,31 @@ func _test_animation() -> void:
 	_check(moved_tail > 0.02, "tail chain follows the turn (%.3f m)" % moved_tail)
 	_check(beast_finite, "no NaN or exploded bones over 40 ticks")
 	beast.queue_free()
+
+func _test_audio() -> void:
+	print("-- Procedural audio")
+	var names := ["slash_1", "slash_2", "slash_3", "impact", "impact_heavy", "dash",
+		"jump", "land", "bolt_fire", "bolt_hit", "hurt", "enemy_die", "growl",
+		"wave_start", "toast", "footstep", "wind_loop", "hum_loop"]
+	var all_ok := true
+	for name in names:
+		var stream := SoundBank.get_stream(name)
+		if stream == null or stream.data.size() < 512:
+			all_ok = false
+			printerr("     %s missing or too short" % name)
+			continue
+		# A silent buffer means a recipe multiplied itself to zero somewhere.
+		var peak := 0
+		var data := stream.data
+		var count := data.size() / 2
+		var step := maxi(count / 512, 1)
+		for i in range(0, count, step):
+			peak = maxi(peak, absi(data.decode_s16(i * 2)))
+		if peak < 2000:
+			all_ok = false
+			printerr("     %s is near-silent (peak %d)" % [name, peak])
+	_check(all_ok, "all %d clips synthesise with signal" % names.size())
+	var wind := SoundBank.get_stream("wind_loop")
+	_check(wind.loop_mode == AudioStreamWAV.LOOP_FORWARD, "ambient loops marked as loops")
+	var again := SoundBank.get_stream("impact")
+	_check(again == SoundBank.get_stream("impact"), "clip cache returns the same stream")

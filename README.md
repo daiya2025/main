@@ -158,6 +158,9 @@ src/ai/
   monster_animator.gd    四足歩行（斜対歩）の手続き型アニメーション
 
 src/fx/vfx.gd            衝撃・斬撃弧・ダッシュ軌跡・オーラ・消滅
+src/audio/
+  sound_bank.gd          全効果音の PCM 合成（減算合成・FM・ノイズ整形）
+  audio_director.gd      ポジショナル SFX プール・環境音ベッド（オートロード）
 src/ui/hud.gd            HUD・ダメージ数値・ローディング・ポストプロセス
 
 shaders/                 12 本の .gdshader（下記 6 章）
@@ -267,9 +270,8 @@ Poly Haven 連携、画質プリセット。
 
 **含まれないもの**（意図的に範囲外）:
 
-- **サウンド／BGM** — 音源アセットを同梱していないため未実装です。
-  `AudioStreamPlayer3D` を各アクション（着地・斬撃・被弾・消滅）に足す形で
-  拡張できるよう、対応するシグナルは `src/core/signals.gd` に出揃っています。
+- **BGM（楽曲）** — 効果音と環境音は全てプロシージャル合成で実装済みですが
+  （下記 5 章 `src/audio/`）、楽曲としての BGM は含みません。
 - **セーブデータ** — 設定（`user://digihariman.cfg`）のみ永続化します。
   スコアやウェーブ進行はセッション内のみです。
 - **メニュー画面** — 起動即プレイです。`scenes/Main.tscn` の前に

@@ -26,5 +26,7 @@ signal quality_changed(preset_name: String)
 signal photo_mode_toggled(active: bool)
 signal toast(text: String, seconds: float)
 
+signal sfx_requested(name: String, world_pos: Vector3)
+
 signal world_build_progress(stage: String, ratio: float)
 signal world_build_finished()

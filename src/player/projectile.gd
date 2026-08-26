@@ -75,5 +75,6 @@ func _burst(at: Vector3, normal: Vector3) -> void:
 	var parent := get_parent()
 	if parent != null:
 		VFX.impact(parent, at, normal, Materials.ORANGE_EMISSIVE, 1.2)
+	Signals.sfx_requested.emit("bolt_hit", at)
 	Signals.camera_shake_requested.emit(0.12, 0.15)
 	queue_free()

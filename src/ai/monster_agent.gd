@@ -205,6 +205,9 @@ func _tick_circle(delta: float) -> void:
 
 func _tick_windup(delta: float) -> void:
 	_brake(delta)
+	if _state_time <= delta:
+		# First tick of the wind-up: the audible telegraph, matching the visual.
+		Signals.sfx_requested.emit("growl", global_position)
 	_rage = minf(1.0, _rage + delta * 3.0)
 	if _distance_to_target() > ATTACK_RANGE * 2.2:
 		_change_state(State.PURSUE)
@@ -280,6 +283,7 @@ func _die() -> void:
 	_change_state(State.DEAD)
 	collision_layer = 0
 	VFX.dissolve(get_parent(), global_position + Vector3(0, 1.0, 0), float(profile["scale"]))
+	Signals.sfx_requested.emit("enemy_die", global_position)
 	Signals.enemy_died.emit(self, global_position)
 	Signals.hit_stop_requested.emit(0.10, 0.05)
 	Signals.camera_shake_requested.emit(0.35, 0.3)

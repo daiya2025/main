@@ -85,6 +85,8 @@ func _ready() -> void:
 
 	_animator = HumanoidAnimator.new(_skeleton)
 	add_child(_animator)
+	_animator.footstep.connect(func(_side: String) -> void:
+		Signals.sfx_requested.emit("footstep", global_position))
 
 	_aura = VFX.aura(self)
 	_aura.position = Vector3(0, 0.95, 0)
@@ -164,11 +166,13 @@ func _process_move(delta: float, wish: Vector3) -> void:
 		if is_on_floor():
 			velocity.y = JUMP_VELOCITY
 			Signals.camera_fov_kick_requested.emit(1.5, 0.2)
+			Signals.sfx_requested.emit("jump", global_position)
 		elif _air_jumps > 0:
 			_air_jumps -= 1
 			velocity.y = JUMP_VELOCITY * 0.88
 			VFX.impact(get_parent(), global_position, Vector3.DOWN, Materials.ORANGE_EMISSIVE, 0.7)
 			Signals.camera_fov_kick_requested.emit(2.2, 0.2)
+			Signals.sfx_requested.emit("jump", global_position)
 
 	if Input.is_action_just_pressed("dash") and _dash_cooldown <= 0.0:
 		_start_dash(wish)
@@ -182,6 +186,7 @@ func _process_move(delta: float, wish: Vector3) -> void:
 		var force := clampf(-_previous_velocity.y / 26.0, 0.0, 1.0)
 		Signals.camera_shake_requested.emit(force * 0.35, 0.2)
 		VFX.impact(get_parent(), global_position, Vector3.UP, Color(0.8, 0.75, 0.7), force * 1.4)
+		Signals.sfx_requested.emit("land", global_position)
 
 func _start_dash(wish: Vector3) -> void:
 	_dash_direction = wish
@@ -194,6 +199,7 @@ func _start_dash(wish: Vector3) -> void:
 	_combo_index = -1
 	_dash_trail.emitting = true
 	Signals.camera_fov_kick_requested.emit(4.5, 0.25)
+	Signals.sfx_requested.emit("dash", global_position)
 	Signals.camera_impulse_requested.emit(-_dash_direction, 0.9)
 
 func _process_dash(delta: float) -> void:
@@ -223,6 +229,7 @@ func _cast_bolt() -> void:
 	bolt.global_position = origin
 
 	VFX.impact(get_parent(), origin, direction, Materials.ORANGE_EMISSIVE, 0.6)
+	Signals.sfx_requested.emit("bolt_fire", origin)
 	Signals.camera_impulse_requested.emit(-direction, 0.35)
 	Signals.camera_shake_requested.emit(0.10, 0.1)
 
@@ -272,6 +279,7 @@ func _begin_attack(index: int) -> void:
 		var to_target := lock_on_target.global_position - global_position
 		_facing = atan2(-to_target.x, -to_target.z)
 	Signals.camera_fov_kick_requested.emit(1.2 + float(index) * 0.8, 0.2)
+	Signals.sfx_requested.emit("slash_%d" % (index + 1), global_position)
 
 func _resolve_hit(step: Dictionary) -> void:
 	var forward := -global_transform.basis.z
@@ -307,6 +315,7 @@ func _resolve_hit(step: Dictionary) -> void:
 	if connected:
 		Game.add_combo()
 		var heavy := _combo_index == COMBO.size() - 1
+		Signals.sfx_requested.emit("impact_heavy" if heavy else "impact", centre)
 		Signals.hit_stop_requested.emit(0.09 if heavy else 0.055, 0.06 if heavy else 0.12)
 		Signals.camera_shake_requested.emit(0.30 if heavy else 0.16, 0.22)
 		Signals.camera_impulse_requested.emit(forward, 0.55 if heavy else 0.3)
@@ -318,6 +327,7 @@ func take_damage(amount: float, from_position: Vector3, _direction: Vector3, _cr
 	_hurt_time = 0.35
 	_invulnerable = 0.45
 	Signals.player_health_changed.emit(health, MAX_HEALTH)
+	Signals.sfx_requested.emit("hurt", global_position)
 	Signals.camera_shake_requested.emit(clampf(amount / 40.0, 0.15, 0.6), 0.3)
 	Signals.camera_impulse_requested.emit((global_position - from_position).normalized(), 0.7)
 	VFX.impact(get_parent(), global_position + Vector3(0, 1.0, 0), (global_position - from_position).normalized(),

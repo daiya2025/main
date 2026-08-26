@@ -61,6 +61,7 @@ func _boot() -> void:
 	player.camera_rig = camera_rig
 
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	Audio.start_ambience(Vector3(0, 11, 0))
 	Signals.world_build_finished.emit()
 	Signals.toast.emit("デジハリマン起動。ノイズ体を排除せよ。", 4.0)
 	print_rich("[color=orange]WORLD[/color] %d buildings / %d props / %d plants / %d lights"
@@ -112,6 +113,7 @@ func _start_wave() -> void:
 	Game.enemies_alive = spawn_list.size()
 	Signals.wave_changed.emit(index, Game.enemies_alive)
 	Signals.toast.emit("WAVE %d — 敵性体 %d" % [index, spawn_list.size()], 3.0)
+	Signals.sfx_requested.emit("wave_start", Vector3.INF)
 
 	for i in spawn_list.size():
 		var angle := TAU * float(i) / float(spawn_list.size()) + randf() * 0.5
