@@ -1,0 +1,21 @@
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+
+# --- Godot ---
+game/.godot/
+game/android/
+*.translation
+
+# --- Downloaded / generated assets (re-fetched by tools/) ---
+downloads/
+output/
+game/assets/polyhaven/
+game/assets/city/
+!game/assets/city/.gitkeep
+!game/assets/polyhaven/.gitkeep
+
+# --- OS ---
+Thumbs.db
+.DS_Store
