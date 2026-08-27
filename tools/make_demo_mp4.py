@@ -95,6 +95,7 @@ def main():
     code = run([
         ffmpeg, "-y", "-i", raw_avi,
         "-c:v", "libx264", "-preset", "slow", "-crf", args.crf,
+        "-c:a", "aac", "-b:a", "192k",
         "-pix_fmt", "yuv420p", "-movflags", "+faststart",
         "-t", "60",
         mp4_out,

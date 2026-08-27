@@ -249,6 +249,8 @@ func hit(dmg: float) -> bool:
 	hp -= dmg
 	_flash = 1.0
 	set_param("hit_flash", 1.0)
+	AudioKit.sfx(self, "impact", global_position + Vector3(0, body_height * 0.5, 0),
+			-4.0, randf_range(0.9, 1.15))
 	if not demo_mode and state == State.IDLE:
 		state = State.CHASE
 	if hp <= 0.0:
@@ -259,6 +261,7 @@ func hit(dmg: float) -> bool:
 
 func _die() -> void:
 	state = State.DEAD
+	AudioKit.sfx(get_parent(), "dissolve", global_position + Vector3(0, 1, 0), -2.0)
 	for c in get_children():
 		if c is CollisionShape3D:
 			c.set_deferred("disabled", true)

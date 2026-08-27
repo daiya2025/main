@@ -177,20 +177,46 @@ static func _make_cycles_loop(anim: AnimationPlayer) -> void:
 
 
 static func _map_animations(anim: AnimationPlayer, kind: String) -> Dictionary:
+	# 注意: Godot の glTF インポータは "-cycle" サフィックスを剥がしてループ化する
+	# ("Idle-cycle" → "Idle")。必ず実在チェック付きで解決する。
+	var wanted_map := {}
 	match kind:
 		"godette":
-			return {
-				"idle": "Idle-cycle", "walk": "walking_nogun-cycle", "run": "running_nogun-cycle",
-				"jump_up": "jump_1_up", "jump_air": "jump_3_midair-cycle",
-				"land": "jump_5_hardlanding", "attack": ["Cannon_Charge", "flinch1"],
-				"combat_idle": "Idlecombat-cycle",
+			wanted_map = {
+				"idle": ["Idle", "Idle-cycle"],
+				"walk": ["walking_nogun", "walking_nogun-cycle"],
+				"run": ["running_nogun", "running_nogun-cycle"],
+				"jump_up": ["jump_1_up"],
+				"jump_air": ["jump_3_midair", "jump_3_midair-cycle"],
+				"land": ["jump_5_hardlanding"],
+				"combat_idle": ["Idlecombat", "Idlecombat-cycle"],
+				"attack": ["Cannon_Charge", "flinch1"],
 			}
 		"mannequiny":
-			return {
-				"idle": "idle", "walk": "run", "run": "run",
-				"jump_up": "air_jump", "jump_air": "air_jump", "land": "air_land",
-				"attack": ["fight_punch", "fight_kick"], "combat_idle": "fight_idle",
+			wanted_map = {
+				"idle": ["idle"], "walk": ["run"], "run": ["run"],
+				"jump_up": ["air_jump"], "jump_air": ["air_jump"], "land": ["air_land"],
+				"combat_idle": ["fight_idle"],
+				"attack": ["fight_punch", "fight_kick"],
 			}
+	if not wanted_map.is_empty():
+		var map := {}
+		for key in wanted_map:
+			if key == "attack":
+				var attacks: Array = []
+				for cand in wanted_map[key]:
+					if anim.has_animation(cand):
+						attacks.append(cand)
+				if not attacks.is_empty():
+					map["attack"] = attacks
+			else:
+				for cand in wanted_map[key]:
+					if anim.has_animation(cand):
+						map[key] = cand
+						break
+				if not map.has(key):
+					push_warning("[Character] アニメ未検出: %s (%s)" % [key, kind])
+		return map
 	# カスタム glb: 名前のあいまい一致
 	var names := anim.get_animation_list()
 	var map := {}

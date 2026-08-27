@@ -55,6 +55,8 @@ func setup(p_world: Node3D, p_player: Player, p_monsters: Dictionary,
 	_build_overlay()
 	_build_shots()
 	_build_events()
+	# タイムライン同期の劇伴 (tools/generate_audio.py 製)
+	AudioKit.music(self, "music_demo", -3.0, false)
 	print("[Demo] 60秒シネマティック (物語構成) 開始: %d ショット / %d イベント" % [_shots.size(), _events.size()])
 
 
@@ -77,21 +79,21 @@ func _build_shots() -> void:
 	# 3.「出現」カゲオニ降臨 → こちらへ歩いてくる / 背後をリッパーが疾走
 	_shots.append(_mv(13.0, 19.5, Vector3(-4, 1.4, 6), Vector3(-10, 1.9, 0),
 			Vector3.ZERO, Vector3.ZERO, 46, 44, "kage_oni", Vector3(0, 2.5, 0)))
-	# 4.「参戦」プレイヤーが雨の中を疾走してくる
-	_shots.append(_mv(19.5, 26.0, Vector3(23, 2.8, 30), Vector3(12, 2.0, 13),
-			Vector3.ZERO, Vector3.ZERO, 48, 42, "player", Vector3(0, 1.2, 0)))
-	# 5.「初撃破」ネオンリッパーとの近接戦 → 3撃目で撃破 (ディゾルブ)
-	_shots.append(_mv(26.0, 33.5, Vector3(0.5, 1.2, 1.0), Vector3(-2.0, 2.1, 7.5),
-			Vector3.ZERO, Vector3.ZERO, 45, 43, "neon_ripper", Vector3(0, 0.9, 0)))
-	# 6.「カゲオニ戦」振りかぶる鬼 vs 回避して斬り込む主人公
-	_shots.append(_mv(33.5, 41.5, Vector3(-7, 1.0, 10), Vector3(6, 2.7, 3),
-			Vector3.ZERO, Vector3.ZERO, 44, 42, "kage_oni", Vector3(0, 2.4, 0)))
+	# 4.「参戦」プレイヤーが雨の中を疾走してくる (サイドから見送るトラッキング)
+	_shots.append(_mv(19.5, 26.0, Vector3(17, 2.2, 19), Vector3(9.5, 1.7, 10),
+			Vector3.ZERO, Vector3.ZERO, 44, 40, "player", Vector3(0, 1.15, 0)))
+	# 5.「初撃破」リッパー vs 主人公: 両者が収まるサイドの二人ショット
+	_shots.append(_mv(26.0, 33.5, Vector3(-3.5, 1.3, 3.0), Vector3(-1.0, 1.9, 6.5),
+			Vector3(4.4, 1.2, 4.6), Vector3(4.4, 1.2, 4.4), 42, 40))
+	# 6.「カゲオニ戦」鬼と主人公の対峙を横から (振り下ろし〜反撃)
+	_shots.append(_mv(33.5, 41.5, Vector3(2.5, 1.6, 10.5), Vector3(0.5, 2.6, 8.5),
+			Vector3(-2.8, 1.9, 3.2), Vector3(-3.0, 1.7, 3.6), 46, 44))
 	# 7.「増援」カメラ上昇 — ゲンブ進撃 / スクランブラー滑空
 	_shots.append(_mv(41.5, 46.0, Vector3(4, 1.8, 12), Vector3(2, 13, 22),
 			Vector3(-10, 2, 8), Vector3(-14, 5, 10), 50, 52))
-	# 8.「絶望」ビル群の谷の彼方からトシクイが迫る
-	_shots.append(_mv(46.0, 52.0, Vector3(0, 3.5, -52), Vector3(4, 13, -88),
-			Vector3.ZERO, Vector3.ZERO, 40, 32, "toshikui", Vector3(0, 14, 0)))
+	# 8.「絶望」ビル群の谷の彼方から60mの三倍体トシクイが迫る
+	_shots.append(_mv(46.0, 52.0, Vector3(0, 4, -55), Vector3(7, 24, -95),
+			Vector3.ZERO, Vector3.ZERO, 46, 36, "toshikui", Vector3(0, 38, 0)))
 	# 9.「決意」主人公の背中越しに巨獣を望むロー・オービット + タイトル
 	_shots.append({"type": "orbit", "t0": 52.0, "t1": 60.0, "target": "player",
 			"target_off": Vector3(0, 1.35, 0), "r0": 5.4, "r1": 3.4,
@@ -135,12 +137,13 @@ func _build_events() -> void:
 			scr.global_position = Vector3(190, 11, 90)
 		_dof(false))
 
-	# --- 8s 裂け目誕生 (白閃光 + 稲妻状に裂ける) ---
+	# --- 8s 裂け目誕生 (白閃光 + 稲妻状に裂ける + braam) ---
 	_ev(8.0, func() -> void:
 		_white = 0.9
-		props.rift_birth(2.5))
+		props.rift_birth(2.5)
+		AudioKit.sfx(self, "rift", Vector3.INF, -1.0))
 	_ev(8.1, func() -> void:
-		_flash_burst(Vector3(0, 82, -30), Color(1.0, 0.3, 0.7), 22.0))
+		_flash_burst(Vector3(0, 66, -30), Color(1.0, 0.3, 0.7), 22.0))
 
 	# --- 13.6s カゲオニ降臨 / 16.2s リッパー疾走 ---
 	_ev(13.6, func() -> void:
@@ -149,25 +152,33 @@ func _build_events() -> void:
 			kage.global_position = Vector3(-16, 0.5, -8)
 			kage.demo_goto(Vector3(-8, 0.5, -3))
 			_flash_burst(kage.global_position + Vector3(0, 2, 0), Color(1.0, 0.4, 0.1), 5.0)
+			AudioKit.sfx(self, "spawn", kage.global_position, -2.0)
 		_dof(true, 22.0))
+	_ev(14.3, func() -> void:
+		var kage := _monster("kage_oni")
+		if kage:
+			AudioKit.sfx(self, "roar_kage", kage.global_position + Vector3(0, 3, 0), 0.0))
 	_ev(16.2, func() -> void:
 		var ripper := _monster("neon_ripper")
 		if ripper:
 			ripper.global_position = Vector3(24, 0.5, -4)
 			ripper.demo_goto(Vector3(4, 0.5, -5))
-			_flash_burst(ripper.global_position + Vector3(0, 1.2, 0), Color(0.2, 1.0, 0.9), 4.0))
+			_flash_burst(ripper.global_position + Vector3(0, 1.2, 0), Color(0.2, 1.0, 0.9), 4.0)
+			AudioKit.sfx(self, "spawn", ripper.global_position, -3.0, 1.2)
+			AudioKit.sfx(self, "screech_ripper", ripper.global_position + Vector3(0, 1.5, 0), -2.0))
 
 	# --- 19.6s プレイヤー参戦 (全力疾走) ---
 	_ev(19.6, func() -> void:
 		player.command_move_to(Vector3(4, 0.5, 6), true)
 		_dof(false))
 
-	# --- 26〜33.5s リッパー戦: 3撃で撃破 ---
+	# --- 26〜33.5s リッパー戦: 対峙 → 3撃で撃破 ---
 	_ev(26.2, func() -> void:
 		var ripper := _monster("neon_ripper")
 		if ripper:
-			ripper.demo_goto(Vector3(5, 0.5, 2))
-		player.command_face(Vector3(0.25, 0, -0.97))
+			ripper.demo_goto(Vector3(4.5, 0.5, 3.2))   # プレイヤー(4,6)の目前へ
+			player.command_face_target(ripper)          # 常に敵へ正対
+		player.combat_mode = true                       # 戦闘構え
 		_dof(true, 12.0))
 	for atk in [[27.3, 45.0], [28.9, 45.0], [30.4, 400.0]]:
 		_ev(atk[0], func() -> void:
@@ -176,11 +187,13 @@ func _build_events() -> void:
 			if ripper:
 				ripper.hit(atk[1]))
 
-	# --- 33.5〜41.5s カゲオニ戦 ---
+	# --- 33.5〜41.5s カゲオニ戦: 密着距離で対峙・回避・反撃 ---
 	_ev(33.6, func() -> void:
 		var kage := _monster("kage_oni")
 		if kage:
-			kage.demo_goto(Vector3(0, 0.5, -1))
+			kage.demo_goto(Vector3(-1.5, 0.5, 2.5))
+			player.command_face_target(kage)
+			AudioKit.sfx(self, "roar_kage", kage.global_position + Vector3(0, 3, 0), -1.0, 0.92)
 		player.command_move_to(Vector3(-2, 0.5, 5))
 		_dof(true, 16.0))
 	_ev(35.0, func() -> void:
@@ -188,10 +201,9 @@ func _build_events() -> void:
 		if kage:
 			kage.demo_attack(2.2))
 	_ev(35.6, func() -> void:
-		player.command_move_to(Vector3(-5.5, 0.5, 3), true))  # 回避
+		player.command_move_to(Vector3(-4.5, 0.5, 4.5), true))  # 間合いを保つ回避
 	for atk2 in [36.9, 38.3, 39.7]:
 		_ev(atk2, func() -> void:
-			player.command_face(Vector3(0.5, 0, -0.87))
 			player.command_attack()
 			var kage := _monster("kage_oni")
 			if kage:
@@ -208,6 +220,7 @@ func _build_events() -> void:
 			genbu.global_position = Vector3(-24, 0.5, 17)
 			genbu.demo_goto(Vector3(-12, 0.5, 9))
 			_flash_burst(genbu.global_position + Vector3(0, 1.5, 0), Color(0.2, 1.0, 0.5), 5.0)
+			AudioKit.sfx(self, "spawn", genbu.global_position, -3.0, 0.8)
 		var scr := _monster("scrambler")
 		if scr:
 			scr.global_position = Vector3(12, 14, 0)
@@ -215,26 +228,32 @@ func _build_events() -> void:
 		var kage := _monster("kage_oni")
 		if kage:
 			kage.demo_goto(Vector3(-10, 0.5, -12))
+		player.command_face_target(null)
 		_dof(false))
 
-	# --- 46s トシクイ接近 ---
+	# --- 46s 三倍体トシクイ接近 (60m級) ---
 	_ev(46.1, func() -> void:
 		var kaiju := _monster("toshikui")
 		if kaiju:
-			kaiju.global_position = Vector3(12, 0.5, -185)
-			kaiju.demo_goto(Vector3(0, 0.5, -128)))
+			kaiju.global_position = Vector3(0, 0.5, -195)
+			kaiju.demo_goto(Vector3(0, 0.5, -120))
+			AudioKit.sfx(self, "roar_kaiju", Vector3.INF, -1.0))
 
-	# --- 52s 決意: 構えの主人公 + タイトル ---
+	# --- 52s 決意: 巨獣と対峙する構えの主人公 + タイトル ---
 	_ev(52.1, func() -> void:
 		player.global_position = Vector3(0, 0.6, 8)
 		player.has_move_target = false
 		player.set_visual_yaw(PI)  # トシクイの方 (-Z) を向く
-		player.command_face(Vector3(0, 0, -1))
-		var pose := player.anim_for("idle")
+		player.command_face_target(_monster("toshikui"))
+		var pose := player.anim_for("combat_idle")
+		if pose == "":
+			pose = player.anim_for("idle")
 		if pose != "":
 			player.command_play(pose, 8.0)
 		_hero_lights(Vector3(0, 1.6, 8))
 		_dof(true, 9.0))
+	_ev(56.5, func() -> void:
+		AudioKit.sfx(self, "roar_kaiju", Vector3.INF, -6.0, 0.9))
 
 	_events.sort_custom(func(a, b) -> bool: return a["t"] < b["t"])
 
@@ -299,10 +318,19 @@ func _dof(enabled: bool, dist: float = 30.0) -> void:
 
 # ------------------------------------------------------------------ 進行
 
+var _dbg_next := 0.0
+
+
 func _process(delta: float) -> void:
 	if _finished:
 		return
 	t += delta
+	if OS.is_stdout_verbose() and t >= _dbg_next:
+		_dbg_next = t + 1.0
+		var anim_name: String = player._anim.current_animation if player._anim else "-"
+		print("[dbg] t=%.1f anim=%s spd=%.1f yaw=%.2f pos=%v" % [
+			t, anim_name, Vector3(player.velocity.x, 0, player.velocity.z).length(),
+			player._visual.rotation.y, player.global_position])
 	while _next_event < _events.size() and _events[_next_event]["t"] <= t:
 		(_events[_next_event]["fn"] as Callable).call()
 		_next_event += 1

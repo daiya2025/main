@@ -625,18 +625,21 @@ class Toshikui extends MonsterBase:
 	var _torso: Node3D
 	var _tails: Array = []
 
+	const GIANT_SCALE := 3.0  # 三倍体: 約60mの超巨大種
+
 	func _init() -> void:
 		display_name = "トシクイ"
-		max_hp = 2000.0
-		move_speed = 1.4
-		turn_speed = 0.7
+		max_hp = 6000.0
+		move_speed = 2.4
+		turn_speed = 0.5
 		aggro_range = 0.0   # プレイヤーを追わない超大型のセットピース
-		attack_range = 8.0
+		attack_range = 20.0
 		attack_damage = 50.0
-		body_radius = 4.5
-		body_height = 21.0
+		body_radius = 13.0
+		body_height = 62.0
 
 	func _build_visual(root: Node3D) -> void:
+		root.scale = Vector3.ONE * GIANT_SCALE
 		var m := shader_mat(SH_KAIJU)
 		var plate := MatLib.concrete_fallback()
 		plate.albedo_color = Color(0.13, 0.14, 0.16)
@@ -754,13 +757,21 @@ class Toshikui extends MonsterBase:
 				_hip_r = hj
 				_kn_r = kj
 
-		glow_light(root, Color(1.0, 0.15, 0.3), 4.5, 45.0, Vector3(0, 14, 0))
+		glow_light(root, Color(1.0, 0.15, 0.3), 4.5, 140.0, Vector3(0, 14, 0))
 		fx_particles(root, Color(1.0, 0.25, 0.15), 60, Vector3(2.0, 4.0, 2.5),
 				Vector3(0, 3.0, -1.0), 0.22, 2.5, Vector3(0, 14, -2))
 
+	var _step_side := 1
+
 	func _animate(_delta: float, speed01: float) -> void:
-		var ph := anim_time * 1.15
+		var ph := anim_time * 0.85
 		var stride := maxf(speed01, 0.3)
+		# 足の接地 (sin の符号反転) に同期した震脚
+		var side := 1 if sin(ph) >= 0.0 else -1
+		if side != _step_side:
+			_step_side = side
+			AudioKit.sfx(self, "footstep_kaiju", global_position + Vector3(side * 6, 0, 0),
+					2.0, randf_range(0.9, 1.05), 60.0)
 		var swing := sin(ph) * 0.38 * stride
 		_hip_l.rotation.x = swing
 		_hip_r.rotation.x = -swing

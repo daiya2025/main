@@ -25,7 +25,9 @@ var external_control := false
 var move_target: Vector3
 var has_move_target := false
 var demo_sprint := false
+var combat_mode := false          # 戦闘構え (combat_idle を基本姿勢に)
 var _demo_face_dir := Vector3.ZERO
+var _face_target: Node3D          # 常にこの相手の方を向く (デモ戦闘用)
 
 var _joints: Dictionary = {}
 var _anim: AnimationPlayer
@@ -146,9 +148,14 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= GRAVITY * delta
 	move_and_slide()
 
-	# キャラクターを進行方向へ向ける (デモの指定向きが最優先)
+	# キャラクターの向き: 対峙相手 > デモ指定向き > 進行方向
 	var planar := Vector3(velocity.x, 0, velocity.z)
-	if external_control and _demo_face_dir.length() > 0.1 and planar.length() <= 0.5:
+	if external_control and is_instance_valid(_face_target):
+		var to_t := _face_target.global_position - global_position
+		to_t.y = 0
+		if to_t.length() > 0.2:
+			_visual.rotation.y = lerp_angle(_visual.rotation.y, atan2(to_t.x, to_t.z), 9.0 * delta)
+	elif external_control and _demo_face_dir.length() > 0.1 and planar.length() <= 0.5:
 		var face_yaw := atan2(_demo_face_dir.x, _demo_face_dir.z)
 		_visual.rotation.y = lerp_angle(_visual.rotation.y, face_yaw, 6.0 * delta)
 	elif planar.length() > 0.5:
@@ -215,6 +222,8 @@ func _animate_rigged(delta: float, speed: float) -> void:
 	elif speed > 0.5:
 		target = _anim_map.get("walk", "")
 		cadence = clampf(speed / WALK_SPEED, 0.7, 1.4)
+	elif combat_mode and _anim_map.has("combat_idle"):
+		target = _anim_map["combat_idle"]
 	else:
 		target = _anim_map.get("idle", "")
 	if target != "" and _anim.has_animation(target):
@@ -241,6 +250,14 @@ func _try_attack() -> void:
 		var attacks: Array = _anim_map["attack"]
 		_play_once(attacks[_attack_idx % attacks.size()], 0.45)
 		_attack_idx += 1
+	# デモ中は対峙相手へ即座に正対し、一歩踏み込む (斬撃が「当たって見える」ように)
+	if external_control and is_instance_valid(_face_target):
+		var to_t := _face_target.global_position - global_position
+		to_t.y = 0
+		if to_t.length() > 0.2:
+			_visual.rotation.y = atan2(to_t.x, to_t.z)
+			velocity += to_t.normalized() * 3.0
+	AudioKit.sfx(self, "slash", global_position, -6.0, randf_range(0.95, 1.1))
 	_spawn_slash_vfx()
 	var fwd := _visual.global_transform.basis.z  # キャラは +Z 前
 	for m in get_tree().get_nodes_in_group("monsters"):
@@ -324,6 +341,11 @@ func command_attack() -> void:
 
 func command_face(dir: Vector3) -> void:
 	_demo_face_dir = dir
+
+
+## この相手と対峙し続ける (null で解除)
+func command_face_target(node: Node3D) -> void:
+	_face_target = node
 
 
 func set_visual_yaw(yaw: float) -> void:

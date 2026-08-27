@@ -53,12 +53,17 @@ func _ready() -> void:
 
 	monsters = MonsterFactory.spawn_all(self)
 
+	# 環境音 (雨) は両モード共通
+	if night > 0.5:
+		AudioKit.music(self, "rain_loop", -14.0, true)
+
 	if demo:
 		var director := DemoDirector.new()
 		director.name = "DemoDirector"
 		add_child(director)
 		director.setup(self, player, monsters, env, props)
 	else:
+		AudioKit.music(self, "music_loop", -10.0, true)
 		var hud := HUD.new()
 		hud.name = "HUD"
 		add_child(hud)
