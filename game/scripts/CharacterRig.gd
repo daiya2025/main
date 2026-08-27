@@ -183,12 +183,13 @@ static func _map_animations(anim: AnimationPlayer, kind: String) -> Dictionary:
 				"idle": "Idle-cycle", "walk": "walking_nogun-cycle", "run": "running_nogun-cycle",
 				"jump_up": "jump_1_up", "jump_air": "jump_3_midair-cycle",
 				"land": "jump_5_hardlanding", "attack": ["Cannon_Charge", "flinch1"],
+				"combat_idle": "Idlecombat-cycle",
 			}
 		"mannequiny":
 			return {
 				"idle": "idle", "walk": "run", "run": "run",
 				"jump_up": "air_jump", "jump_air": "air_jump", "land": "air_land",
-				"attack": ["fight_punch", "fight_kick"],
+				"attack": ["fight_punch", "fight_kick"], "combat_idle": "fight_idle",
 			}
 	# カスタム glb: 名前のあいまい一致
 	var names := anim.get_animation_list()

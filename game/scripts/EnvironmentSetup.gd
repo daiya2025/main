@@ -7,12 +7,12 @@ extends Object
 
 const PRESETS := {
 	"night": {
-		"sun_energy": 0.55, "sun_color": Color(0.62, 0.72, 1.0),
+		"sun_energy": 0.85, "sun_color": Color(0.66, 0.75, 1.0),
 		"sun_dir": Vector3(-0.35, -0.5, -0.4),
-		"bg_energy": 1.05, "exposure": 1.4,
-		"fog_density": 0.018, "fog_albedo": Color(0.42, 0.50, 0.68),
+		"bg_energy": 1.35, "exposure": 1.6,
+		"fog_density": 0.016, "fog_albedo": Color(0.48, 0.55, 0.72),
 		"night_factor": 1.0, "rain": true,
-		"sky_top": Color(0.035, 0.05, 0.11), "sky_horizon": Color(0.30, 0.19, 0.33),
+		"sky_top": Color(0.05, 0.07, 0.15), "sky_horizon": Color(0.38, 0.25, 0.40),
 	},
 	"dusk": {
 		"sun_energy": 1.1, "sun_color": Color(1.0, 0.55, 0.3),
@@ -87,8 +87,8 @@ static func setup(root: Node3D, preset_name: String) -> Dictionary:
 	env.glow_hdr_threshold = 1.1
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.adjustment_enabled = true
-	env.adjustment_brightness = 1.06
-	env.adjustment_contrast = 1.04
+	env.adjustment_brightness = 1.12
+	env.adjustment_contrast = 1.03
 	env.adjustment_saturation = 1.12
 
 	# --- ボリュメトリックフォグ (ネオンの光芒) ---

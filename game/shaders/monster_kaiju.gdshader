@@ -50,5 +50,5 @@ void fragment() {
 	ROUGHNESS = mix(0.9, 0.55, crevice);
 	SPECULAR = 0.4;
 	NORMAL = normalize(NORMAL + vec3(scale_pat - 0.5) * 0.4);
-	EMISSION = under_glow * veins * breath * glow_strength + vec3(1.0) * hit_flash * 2.0;
+	EMISSION = under_glow * veins * breath * glow_strength + under_glow * hit_flash * 1.2;
 }

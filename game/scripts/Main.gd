@@ -57,7 +57,7 @@ func _ready() -> void:
 		var director := DemoDirector.new()
 		director.name = "DemoDirector"
 		add_child(director)
-		director.setup(self, player, monsters, env)
+		director.setup(self, player, monsters, env, props)
 	else:
 		var hud := HUD.new()
 		hud.name = "HUD"

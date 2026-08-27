@@ -147,11 +147,35 @@ func _spawn_building(rng: RandomNumberGenerator, base_pos: Vector3,
 		_box_part(b, Vector3(w * 1.18, podium_h, d * 1.18), Vector3(0, podium_h * 0.5, 0), _facade_material)
 		_box_part(b, Vector3(w * 1.22, 0.5, d * 1.22), Vector3(0, podium_h + 0.25, 0), concrete)
 
-	# --- タワー本体 (+セットバック) ---
+	# --- タワー本体 (箱 / 円筒 / L字 の3形状 + セットバック) ---
 	var tower_h := h - podium_h
 	var setback := h > 55.0 and rng.randf() < 0.55
 	var lower_h := tower_h * (0.62 if setback else 1.0)
-	_box_part(b, Vector3(w, lower_h, d), Vector3(0, podium_h + lower_h * 0.5, 0), _facade_material)
+	var shape_roll := rng.randf()
+	var cylindrical := shape_roll < 0.16 and h > 35.0
+	if cylindrical:
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = minf(w, d) * 0.5
+		cyl.bottom_radius = cyl.top_radius
+		cyl.height = lower_h
+		cyl.radial_segments = 24
+		var cmi := MeshInstance3D.new()
+		cmi.mesh = cyl
+		cmi.material_override = _facade_material
+		cmi.position = Vector3(0, podium_h + lower_h * 0.5, 0)
+		cmi.gi_mode = GeometryInstance3D.GI_MODE_STATIC
+		b.add_child(cmi)
+	else:
+		_box_part(b, Vector3(w, lower_h, d), Vector3(0, podium_h + lower_h * 0.5, 0), _facade_material)
+		if shape_roll < 0.42:  # L字: 直交する副翼
+			_box_part(b, Vector3(w * 0.55, lower_h * rng.randf_range(0.7, 1.0), d * 0.55),
+					Vector3(w * 0.42, podium_h + lower_h * 0.35, d * 0.42), _facade_material)
+		# コーナーの付柱 (垂直リブ)
+		if closeness > 0.25:
+			for sx in [-1.0, 1.0]:
+				for sz in [-1.0, 1.0]:
+					_box_part(b, Vector3(0.55, lower_h, 0.55),
+							Vector3(sx * w * 0.5, podium_h + lower_h * 0.5, sz * d * 0.5), concrete)
 	var top_y := podium_h + lower_h
 	var top_w := w
 	var top_d := d
@@ -164,9 +188,27 @@ func _spawn_building(rng: RandomNumberGenerator, base_pos: Vector3,
 		_box_part(b, Vector3(w + 0.5, 0.7, d + 0.5), Vector3(0, top_y + 0.35, 0), concrete)
 		top_y += upper_h
 
-	# --- 屋上: パラペット + 設備 ---
+	# エントランス庇 + 支柱 (中心街のみ)
+	if closeness > 0.35 and not cylindrical:
+		var front := -1.0 if base_pos.z > 0 else 1.0
+		_box_part(b, Vector3(w * 0.5, 0.3, 3.0), Vector3(0, 3.9, front * (d * 0.5 + 1.5)), metal)
+		for sx in [-1.0, 1.0]:
+			_box_part(b, Vector3(0.18, 3.8, 0.18),
+					Vector3(sx * w * 0.2, 1.9, front * (d * 0.5 + 2.6)), metal)
+
+	# 高層ビルのクラウン照明 (渋谷の頂部ライン)
+	if h > 68.0:
+		var crown_colors := [Color(0.4, 0.8, 1.0), Color(1.0, 0.35, 0.5), Color(0.9, 0.8, 0.5), Color(0.5, 1.0, 0.7)]
+		var crown := MatLib.emissive(crown_colors[rng.randi() % crown_colors.size()], 2.8)
+		_box_part(b, Vector3(top_w + 0.35, 1.1, top_d + 0.35), Vector3(0, top_y - 0.8, 0), crown)
+
+	# --- 屋上: パラペット + 手すり + 設備 ---
 	_box_part(b, Vector3(top_w + 0.4, 0.8, top_d + 0.4), Vector3(0, top_y + 0.4, 0), concrete)
 	var roof_y := top_y + 0.8
+	if h > 38.0 and not cylindrical:
+		for side_rail in [-1.0, 1.0]:
+			_box_part(b, Vector3(top_w, 0.9, 0.07), Vector3(0, roof_y + 0.45, side_rail * top_d * 0.48), metal)
+			_box_part(b, Vector3(0.07, 0.9, top_d), Vector3(side_rail * top_w * 0.48, roof_y + 0.45, 0), metal)
 	for _k in rng.randi_range(1, 3):  # 室外機・キュービクル
 		_box_part(b, Vector3(rng.randf_range(1.5, 3.5), rng.randf_range(1.0, 2.0), rng.randf_range(1.5, 3.0)),
 				Vector3(rng.randf_range(-0.3, 0.3) * top_w, roof_y + 0.8, rng.randf_range(-0.3, 0.3) * top_d),

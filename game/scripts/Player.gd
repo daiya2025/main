@@ -24,6 +24,8 @@ var kills := 0
 var external_control := false
 var move_target: Vector3
 var has_move_target := false
+var demo_sprint := false
+var _demo_face_dir := Vector3.ZERO
 
 var _joints: Dictionary = {}
 var _anim: AnimationPlayer
@@ -111,6 +113,7 @@ func _physics_process(delta: float) -> void:
 	var input_dir := Vector2.ZERO
 	var sprinting := false
 	if external_control:
+		sprinting = demo_sprint
 		if has_move_target:
 			var to_target := move_target - global_position
 			to_target.y = 0
@@ -119,6 +122,7 @@ func _physics_process(delta: float) -> void:
 				input_dir = Vector2(dir3.x, dir3.z)
 			else:
 				has_move_target = false
+				demo_sprint = false
 	else:
 		var raw := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		sprinting = Input.is_action_pressed("sprint")
@@ -142,9 +146,12 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= GRAVITY * delta
 	move_and_slide()
 
-	# キャラクターを進行方向へ向ける
+	# キャラクターを進行方向へ向ける (デモの指定向きが最優先)
 	var planar := Vector3(velocity.x, 0, velocity.z)
-	if planar.length() > 0.5:
+	if external_control and _demo_face_dir.length() > 0.1 and planar.length() <= 0.5:
+		var face_yaw := atan2(_demo_face_dir.x, _demo_face_dir.z)
+		_visual.rotation.y = lerp_angle(_visual.rotation.y, face_yaw, 6.0 * delta)
+	elif planar.length() > 0.5:
 		var yaw := atan2(planar.x, planar.z)
 		_visual.rotation.y = lerp_angle(_visual.rotation.y, yaw, 10.0 * delta)
 
@@ -304,11 +311,30 @@ func _apply_camera_shake() -> void:
 
 
 ## DemoDirector 用
-func command_move_to(pos: Vector3) -> void:
+func command_move_to(pos: Vector3, sprint: bool = false) -> void:
 	move_target = pos
 	has_move_target = true
+	demo_sprint = sprint
 
 
 func command_attack() -> void:
 	_attack_cd = 0.0
 	_try_attack()
+
+
+func command_face(dir: Vector3) -> void:
+	_demo_face_dir = dir
+
+
+func set_visual_yaw(yaw: float) -> void:
+	_visual.rotation.y = yaw
+
+
+## 指定アニメを一定時間再生 (構えポーズ等)
+func command_play(anim_name: String, lock: float) -> void:
+	_play_once(anim_name, lock)
+
+
+func anim_for(key: String) -> String:
+	var v: Variant = _anim_map.get(key, "")
+	return v if v is String else ""

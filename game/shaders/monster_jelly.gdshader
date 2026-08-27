@@ -28,6 +28,6 @@ void fragment() {
 	METALLIC = 0.0;
 	SPECULAR = 1.0;
 	EMISSION = mix(core_color * pulse * 1.6, shell_color * 4.0, fres)
-			+ vec3(1.0) * hit_flash * 3.0;
+			+ core_color * hit_flash * 1.4;
 	ALPHA = clamp(0.25 + fres * 0.7, 0.0, 1.0) * (1.0 - dissolve);
 }

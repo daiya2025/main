@@ -10,11 +10,11 @@ render_mode cull_back;
 
 uniform vec3 base_color : source_color = vec3(0.52, 0.53, 0.56);
 uniform float night_factor : hint_range(0.0, 1.0) = 1.0;
-uniform float window_emission = 3.2;
+uniform float window_emission = 4.0;
 uniform vec3 window_warm : source_color = vec3(1.0, 0.72, 0.42);
 uniform vec3 window_cool : source_color = vec3(0.55, 0.78, 1.0);
-uniform float lit_ratio = 0.30;
-uniform float storefront_emission = 4.0;
+uniform float lit_ratio = 0.38;
+uniform float storefront_emission = 5.2;
 
 varying vec3 wpos;
 varying vec3 wnormal;
@@ -82,6 +82,21 @@ void fragment() {
 		// カーテンウォールは青緑ガラスで点灯少なめ
 		if (style == 1) { lit *= 0.55; }
 
+		// 室内光の縦グラデーション (天井照明: 窓の上ほど明るい)
+		float win_v = clamp((f.y - (0.47 - win_half.y)) / (2.0 * win_half.y), 0.0, 1.0);
+		float interior = mix(0.55, 1.4, win_v);
+		// 窓ごとのガラスの微妙な傾き → 反射がパネル単位でばらける
+		vec2 tilt = (vec2(hash12(cell + 1.7), hash12(cell + 3.1)) - 0.5) * 0.09 * inside * (1.0 - frame);
+		vec3 pert_world = (an.x > an.z) ? vec3(0.0, tilt.y, tilt.x) : vec3(tilt.x, tilt.y, 0.0);
+		// 窓下の室外機シルエット (パンチ窓の一部)
+		float ac = 0.0;
+		if (style == 0) {
+			ac = step(abs(f.x - 0.63), 0.10) * step(abs(f.y - 0.30), 0.075)
+					* step(0.72, fract(rnd * 3.31)) * inside;
+		}
+		// 窓下枠の落ち影
+		float sill = step(abs(f.y - (0.47 - win_half.y) + 0.02), 0.035) * step(d.x, win_half.x) * (1.0 - inside);
+
 		// 窓下の雨だれ汚れ (縦ノイズ、窓の下ほど濃い)
 		float streak = vnoise(vec2(plane.x * 2.2, plane.y * 0.15)) * vnoise(plane * vec2(3.1, 0.3));
 		float dirt = clamp(streak * 0.8, 0.0, 1.0) * (0.35 + 0.65 * step(f.y, 0.45));
@@ -90,16 +105,19 @@ void fragment() {
 		vec3 glass_col = (style == 1) ? vec3(0.05, 0.075, 0.085) : vec3(0.03, 0.035, 0.045);
 		vec3 albedo = mix(tint, glass_col, inside);
 		albedo = mix(albedo, tint * 0.55, frame + slab * 0.6);       // 枠とスラブ
-		albedo *= (1.0 - dirt * 0.45);
+		albedo = mix(albedo, vec3(0.32, 0.33, 0.34), ac);            // 室外機
+		albedo *= (1.0 - dirt * 0.45) * (1.0 - sill * 0.45);
 
 		float rough = mix(0.78, (style == 1) ? 0.08 : 0.14, inside);
 		rough = mix(rough, 0.6, frame + slab * 0.5);
+		rough = mix(rough, 0.85, ac);
 		rough += dirt * 0.2;
 
-		float metal = inside * ((style == 1) ? 0.6 : 0.35);
+		float metal = inside * ((style == 1) ? 0.6 : 0.35) * (1.0 - ac);
 		metal = mix(metal, 0.85, frame);
 
-		vec3 emit = wcol * window_emission * inside * (1.0 - frame) * lit * bright * flicker;
+		vec3 emit = wcol * window_emission * inside * (1.0 - frame) * (1.0 - ac)
+				* lit * bright * flicker * interior;
 
 		// --- 店舗階 (地上 0〜4.2m): 大開口ガラス + 店内光 + 看板色 ---
 		float sf_zone = step(wpos.y, 4.2) * night_factor;
@@ -129,6 +147,7 @@ void fragment() {
 		METALLIC = metal;
 		ROUGHNESS = clamp(rough, 0.05, 1.0);
 		SPECULAR = mix(0.3, 0.6, inside);
+		NORMAL = normalize(NORMAL + (VIEW_MATRIX * vec4(pert_world, 0.0)).xyz);
 		EMISSION = emit;
 	}
 }

@@ -55,5 +55,5 @@ void fragment() {
 	EMISSION = stripe_color * stripe * stripe_emission * (1.0 - seam * 0.7)
 			+ stripe_color * seam * 0.25
 			+ iri * fres * 1.2
-			+ vec3(1.0) * hit_flash * 3.0;
+			+ stripe_color * hit_flash * 1.4;
 }

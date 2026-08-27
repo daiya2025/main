@@ -73,5 +73,5 @@ void fragment() {
 	NORMAL = normalize(NORMAL + vec3(micro - 0.5, micro * 0.7 - 0.35, 0.0) * 0.35);
 	EMISSION = magma_color * (crack * pulse + burn_edge * 2.5) * magma_emission
 			+ magma_color * glint * 1.5
-			+ vec3(1.0) * hit_flash * 3.0;
+			+ magma_color * hit_flash * 1.4;
 }

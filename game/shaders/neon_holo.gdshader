@@ -34,7 +34,7 @@ void fragment() {
 	float glow = g * cellmask * scan * edge + frame * 0.9;
 	float flicker = 0.9 + 0.1 * sin(TIME * 17.0 + hash12(vec2(floor(TIME * 2.0))) * 20.0);
 
-	ALBEDO = vec3(0.0);
-	EMISSION = col * glow * intensity * flicker;
+	// unshaded では ALBEDO が最終色 (互換レンダラは EMISSION を出力しない)
+	ALBEDO = col * glow * intensity * flicker;
 	ALPHA = clamp(glow, 0.0, 1.0);
 }

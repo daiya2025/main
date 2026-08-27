@@ -32,6 +32,7 @@ var _mats: Array[ShaderMaterial] = []
 var _move_dir := Vector3.ZERO
 var _demo_target: Vector3
 var _demo_has_target := false
+var _demo_attack_until := 0.0
 
 
 func _ready() -> void:
@@ -153,7 +154,7 @@ func _physics_process(delta: float) -> void:
 		return
 	anim_time += delta
 	if _flash > 0.0:
-		_flash = maxf(_flash - delta * 4.0, 0.0)
+		_flash = maxf(_flash - delta * 6.0, 0.0)
 		set_param("hit_flash", _flash)
 
 	var player := _get_player()
@@ -162,6 +163,11 @@ func _physics_process(delta: float) -> void:
 	if player:
 		to_player = player.global_position - global_position
 		dist = to_player.length()
+
+	# デモ演出: 指定時間だけ攻撃モーションを強制
+	if demo_mode:
+		state = State.ATTACK if anim_time < _demo_attack_until else \
+				(State.IDLE if state == State.ATTACK else state)
 
 	var desired := Vector3.ZERO
 	match state:
@@ -185,8 +191,11 @@ func _physics_process(delta: float) -> void:
 				if dist < attack_range + body_radius + 1.0 and player and player.has_method("take_damage"):
 					player.call("take_damage", attack_damage)
 				_attack_timer = 1.3
-			if demo_mode or dist > attack_range + body_radius + 1.4:
-				state = State.CHASE if not demo_mode else State.IDLE
+			if demo_mode:
+				if anim_time >= _demo_attack_until:
+					state = State.IDLE
+			elif dist > attack_range + body_radius + 1.4:
+				state = State.CHASE
 
 	desired.y = 0
 	velocity.x = move_toward(velocity.x, desired.x, move_speed * 3.0 * delta)
@@ -266,3 +275,8 @@ func demo_goto(pos: Vector3) -> void:
 	_demo_target = pos
 	_demo_has_target = true
 	state = State.IDLE
+
+
+func demo_attack(duration: float = 2.0) -> void:
+	_demo_attack_until = anim_time + duration
+	_attack_timer = 0.6

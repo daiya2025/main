@@ -1,17 +1,21 @@
 class_name DemoDirector
 extends Node3D
-## 60秒シネマティックデモの監督。
-## - 8ショット構成のカメラワーク (クレーン / ドリー / トラッキング / オービット)
-## - モンスターとプレイヤーへの演技指示 (タイムラインイベント)
-## - レターボックス / タイトル / フェード
-## - Movie Maker モード (--write-movie) では 60 秒で自動終了し、
-##   tools/make_demo_mp4.py が MP4 に変換する。
+## 60秒シネマティックデモの監督 — 物語構成版。
+##
+## 【物語】平穏な雨の渋谷 → 上空に次元の裂け目が誕生 → モンスターが出現し街を侵略
+##        → プレイヤー参戦 → ネオンリッパーを撃破 → カゲオニと激闘 → 増援と巨獣で絶望
+##        → それでも構える主人公 → タイトル
+##
+## - 9ショット構成 (クレーン/ティルトアップ/トラッキング/バトルカム/ライズ/プッシュイン/オービット)
+## - スポーンフラッシュ / 裂け目誕生 / 撃破ディゾルブなどのイベント演出
+## - Movie Maker モード (--write-movie) では 60 秒で自動終了し MP4 化される
 
 const DURATION := 60.0
 
 var world: Node3D
 var player: Player
 var monsters: Dictionary = {}
+var props: CityProps
 var attrs: CameraAttributesPractical
 
 var cam: Camera3D
@@ -22,13 +26,18 @@ var _next_event := 0
 var _fade: ColorRect
 var _title: Label
 var _subtitle: Label
+var _chapter: Label
+var _white := 0.0
+var _last_look := Vector3.ZERO
 var _finished := false
 
 
-func setup(p_world: Node3D, p_player: Player, p_monsters: Dictionary, env: Dictionary) -> void:
+func setup(p_world: Node3D, p_player: Player, p_monsters: Dictionary,
+		env: Dictionary, p_props: CityProps) -> void:
 	world = p_world
 	player = p_player
 	monsters = p_monsters
+	props = p_props
 	attrs = env.get("attributes")
 
 	cam = Camera3D.new()
@@ -46,54 +55,47 @@ func setup(p_world: Node3D, p_player: Player, p_monsters: Dictionary, env: Dicti
 	_build_overlay()
 	_build_shots()
 	_build_events()
-	print("[Demo] 60秒シネマティック開始 (%d ショット / %d イベント)" % [_shots.size(), _events.size()])
+	print("[Demo] 60秒シネマティック (物語構成) 開始: %d ショット / %d イベント" % [_shots.size(), _events.size()])
 
 
 # ------------------------------------------------------------------ ショット定義
 
 func _mv(t0: float, t1: float, from: Vector3, to: Vector3, look_from: Vector3, look_to: Vector3,
-		fov0: float, fov1: float, target: String = "") -> Dictionary:
+		fov0: float, fov1: float, target: String = "", target_off := Vector3.ZERO) -> Dictionary:
 	return {"type": "move", "t0": t0, "t1": t1, "from": from, "to": to,
 			"look_from": look_from, "look_to": look_to, "fov0": fov0, "fov1": fov1,
-			"target": target, "target_off": Vector3.ZERO}
+			"target": target, "target_off": target_off}
 
 
 func _build_shots() -> void:
-	# 1. 夜景クレーン: 上空から街と裂け目を見せる
-	_shots.append(_mv(0.0, 9.0, Vector3(-45, 240, 160), Vector3(0, 115, 85),
-			Vector3(0, 15, 0), Vector3(0, 45, -30), 62, 50))
-	# 2. ストリートドリー: 濡れた路面から裂け目へティルトアップ
-	_shots.append(_mv(9.0, 15.5, Vector3(22, 2.6, 36), Vector3(9, 2.0, 17),
-			Vector3(0, 2, 8), Vector3(0, 42, -30), 55, 50))
-	# 3. ネオンリッパー疾走トラッキング
-	var s3 := _mv(15.5, 22.5, Vector3(48, 2.6, 22), Vector3(34, 1.1, 4),
-			Vector3.ZERO, Vector3.ZERO, 46, 38, "neon_ripper")
-	s3["target_off"] = Vector3(0, 1.2, 0)
-	_shots.append(s3)
-	# 4. カゲオニ戦闘 ローアングル
-	var s4 := _mv(22.5, 30.5, Vector3(-17, 1.6, -6), Vector3(-23, 3.4, -14),
-			Vector3.ZERO, Vector3.ZERO, 46, 42, "kage_oni")
-	s4["target_off"] = Vector3(0, 2.6, 0)
-	_shots.append(s4)
-	# 5. スクランブラー ティルトアップ
-	var s5 := _mv(30.5, 37.5, Vector3(7, 1.6, -8), Vector3(11, 5.5, -12),
-			Vector3.ZERO, Vector3.ZERO, 50, 44, "scrambler")
-	s5["target_off"] = Vector3(0, 1.0, 0)
-	_shots.append(s5)
-	# 6. ゲンブ進撃ワイド
-	var s6 := _mv(37.5, 45.5, Vector3(-25, 1.4, 14), Vector3(-33, 2.8, 22),
-			Vector3.ZERO, Vector3.ZERO, 46, 42, "genbu")
-	s6["target_off"] = Vector3(0, 1.8, 0)
-	_shots.append(s6)
-	# 7. トシクイ シルエット プッシュイン
-	var s7 := _mv(45.5, 54.0, Vector3(0, 3, -48), Vector3(3, 13, -86),
-			Vector3.ZERO, Vector3.ZERO, 42, 32, "toshikui")
-	s7["target_off"] = Vector3(0, 14, 0)
-	_shots.append(s7)
-	# 8. ヒーローショット (プレイヤー周回) + タイトル
-	_shots.append({"type": "orbit", "t0": 54.0, "t1": 60.0, "target": "player",
-			"target_off": Vector3(0, 1.4, 0), "r0": 5.5, "r1": 3.2,
-			"h0": 1.9, "h1": 1.5, "a0": 0.4, "a1": 2.6, "fov0": 46, "fov1": 40})
+	# 1.「平穏」雨の渋谷を見下ろすクレーンダウン (裂け目はまだ無い)
+	_shots.append(_mv(0.0, 7.0, Vector3(-40, 220, 150), Vector3(0, 95, 70),
+			Vector3(0, 10, 0), Vector3(0, 20, 0), 60, 52))
+	# 2.「裂け目誕生」路上から空へティルトアップ → 8秒で裂け目が裂ける
+	_shots.append(_mv(7.0, 13.0, Vector3(14, 2.2, 26), Vector3(9, 2.6, 18),
+			Vector3(0, 3, -5), Vector3(0, 52, -30), 55, 50))
+	# 3.「出現」カゲオニ降臨 → こちらへ歩いてくる / 背後をリッパーが疾走
+	_shots.append(_mv(13.0, 19.5, Vector3(-4, 1.4, 6), Vector3(-10, 1.9, 0),
+			Vector3.ZERO, Vector3.ZERO, 46, 44, "kage_oni", Vector3(0, 2.5, 0)))
+	# 4.「参戦」プレイヤーが雨の中を疾走してくる
+	_shots.append(_mv(19.5, 26.0, Vector3(23, 2.8, 30), Vector3(12, 2.0, 13),
+			Vector3.ZERO, Vector3.ZERO, 48, 42, "player", Vector3(0, 1.2, 0)))
+	# 5.「初撃破」ネオンリッパーとの近接戦 → 3撃目で撃破 (ディゾルブ)
+	_shots.append(_mv(26.0, 33.5, Vector3(0.5, 1.2, 1.0), Vector3(-2.0, 2.1, 7.5),
+			Vector3.ZERO, Vector3.ZERO, 45, 43, "neon_ripper", Vector3(0, 0.9, 0)))
+	# 6.「カゲオニ戦」振りかぶる鬼 vs 回避して斬り込む主人公
+	_shots.append(_mv(33.5, 41.5, Vector3(-7, 1.0, 10), Vector3(6, 2.7, 3),
+			Vector3.ZERO, Vector3.ZERO, 44, 42, "kage_oni", Vector3(0, 2.4, 0)))
+	# 7.「増援」カメラ上昇 — ゲンブ進撃 / スクランブラー滑空
+	_shots.append(_mv(41.5, 46.0, Vector3(4, 1.8, 12), Vector3(2, 13, 22),
+			Vector3(-10, 2, 8), Vector3(-14, 5, 10), 50, 52))
+	# 8.「絶望」ビル群の谷の彼方からトシクイが迫る
+	_shots.append(_mv(46.0, 52.0, Vector3(0, 3.5, -52), Vector3(4, 13, -88),
+			Vector3.ZERO, Vector3.ZERO, 40, 32, "toshikui", Vector3(0, 14, 0)))
+	# 9.「決意」主人公の背中越しに巨獣を望むロー・オービット + タイトル
+	_shots.append({"type": "orbit", "t0": 52.0, "t1": 60.0, "target": "player",
+			"target_off": Vector3(0, 1.35, 0), "r0": 5.4, "r1": 3.4,
+			"h0": 1.8, "h1": 1.3, "a0": 2.55, "a1": 0.95, "fov0": 46, "fov1": 40})
 
 
 func _target_node(key: String) -> Node3D:
@@ -109,73 +111,181 @@ func _ev(at: float, fn: Callable) -> void:
 	_events.append({"t": at, "fn": fn})
 
 
+func _monster(key: String) -> MonsterBase:
+	var m: Node3D = monsters.get(key)
+	return m as MonsterBase if is_instance_valid(m) else null
+
+
 func _build_events() -> void:
-	_ev(0.1, func() -> void:
-		player.global_position = Vector3(14, 0.5, 26)
+	# --- 0s ステージング: 裂け目を隠し、役者を袖へ ---
+	_ev(0.05, func() -> void:
+		props.set_rift_active(false)
+		player.global_position = Vector3(30, 0.6, 34)
+		var kage := _monster("kage_oni")
+		if kage:
+			kage.global_position = Vector3(-120, 0.5, -80)
+		var ripper := _monster("neon_ripper")
+		if ripper:
+			ripper.global_position = Vector3(150, 0.5, 60)
+		var genbu := _monster("genbu")
+		if genbu:
+			genbu.global_position = Vector3(-140, 0.5, 100)
+		var scr := _monster("scrambler")
+		if scr:
+			scr.global_position = Vector3(190, 11, 90)
 		_dof(false))
-	_ev(9.0, func() -> void:
-		player.command_move_to(Vector3(4, 0.5, 12)))
-	_ev(15.4, func() -> void:
-		var r: MonsterBase = monsters.get("neon_ripper")
-		if r:
-			r.global_position = Vector3(44, 0.5, 16)
-			r.demo_goto(Vector3(28, 0.5, -2))
-		_dof(true, 25.0))
-	_ev(19.0, func() -> void:
-		var r: MonsterBase = monsters.get("neon_ripper")
-		if r:
-			r.demo_goto(Vector3(12, 0.5, -14)))
-	_ev(22.4, func() -> void:
-		var k: MonsterBase = monsters.get("kage_oni")
-		if k:
-			k.global_position = Vector3(-30, 0.5, -22)
-			k.demo_goto(Vector3(-27, 0.5, -17))
-		player.global_position = Vector3(-23, 0.5, -13)
-		_dof(true, 18.0))
-	for at in [24.5, 26.0, 27.5, 29.0]:
-		_ev(at, func() -> void:
+
+	# --- 8s 裂け目誕生 (白閃光 + 稲妻状に裂ける) ---
+	_ev(8.0, func() -> void:
+		_white = 0.9
+		props.rift_birth(2.5))
+	_ev(8.1, func() -> void:
+		_flash_burst(Vector3(0, 82, -30), Color(1.0, 0.3, 0.7), 22.0))
+
+	# --- 13.6s カゲオニ降臨 / 16.2s リッパー疾走 ---
+	_ev(13.6, func() -> void:
+		var kage := _monster("kage_oni")
+		if kage:
+			kage.global_position = Vector3(-16, 0.5, -8)
+			kage.demo_goto(Vector3(-8, 0.5, -3))
+			_flash_burst(kage.global_position + Vector3(0, 2, 0), Color(1.0, 0.4, 0.1), 5.0)
+		_dof(true, 22.0))
+	_ev(16.2, func() -> void:
+		var ripper := _monster("neon_ripper")
+		if ripper:
+			ripper.global_position = Vector3(24, 0.5, -4)
+			ripper.demo_goto(Vector3(4, 0.5, -5))
+			_flash_burst(ripper.global_position + Vector3(0, 1.2, 0), Color(0.2, 1.0, 0.9), 4.0))
+
+	# --- 19.6s プレイヤー参戦 (全力疾走) ---
+	_ev(19.6, func() -> void:
+		player.command_move_to(Vector3(4, 0.5, 6), true)
+		_dof(false))
+
+	# --- 26〜33.5s リッパー戦: 3撃で撃破 ---
+	_ev(26.2, func() -> void:
+		var ripper := _monster("neon_ripper")
+		if ripper:
+			ripper.demo_goto(Vector3(5, 0.5, 2))
+		player.command_face(Vector3(0.25, 0, -0.97))
+		_dof(true, 12.0))
+	for atk in [[27.3, 45.0], [28.9, 45.0], [30.4, 400.0]]:
+		_ev(atk[0], func() -> void:
 			player.command_attack()
-			var k: MonsterBase = monsters.get("kage_oni")
-			if k:
-				k.hit(1.0))  # 被弾フラッシュ演出 (HPは十分残る)
-	_ev(30.4, func() -> void:
-		var s: MonsterBase = monsters.get("scrambler")
-		if s:
-			s.global_position = Vector3(10, 11, -16)
-			s.demo_goto(Vector3(14, 11, -24))
+			var ripper := _monster("neon_ripper")
+			if ripper:
+				ripper.hit(atk[1]))
+
+	# --- 33.5〜41.5s カゲオニ戦 ---
+	_ev(33.6, func() -> void:
+		var kage := _monster("kage_oni")
+		if kage:
+			kage.demo_goto(Vector3(0, 0.5, -1))
+		player.command_move_to(Vector3(-2, 0.5, 5))
+		_dof(true, 16.0))
+	_ev(35.0, func() -> void:
+		var kage := _monster("kage_oni")
+		if kage:
+			kage.demo_attack(2.2))
+	_ev(35.6, func() -> void:
+		player.command_move_to(Vector3(-5.5, 0.5, 3), true))  # 回避
+	for atk2 in [36.9, 38.3, 39.7]:
+		_ev(atk2, func() -> void:
+			player.command_face(Vector3(0.5, 0, -0.87))
+			player.command_attack()
+			var kage := _monster("kage_oni")
+			if kage:
+				kage.hit(28.0))
+	_ev(38.6, func() -> void:
+		var kage := _monster("kage_oni")
+		if kage:
+			kage.demo_attack(1.8))
+
+	# --- 41.5s 増援 (ゲンブ進撃 / スクランブラー滑空) ---
+	_ev(41.6, func() -> void:
+		var genbu := _monster("genbu")
+		if genbu:
+			genbu.global_position = Vector3(-24, 0.5, 17)
+			genbu.demo_goto(Vector3(-12, 0.5, 9))
+			_flash_burst(genbu.global_position + Vector3(0, 1.5, 0), Color(0.2, 1.0, 0.5), 5.0)
+		var scr := _monster("scrambler")
+		if scr:
+			scr.global_position = Vector3(12, 14, 0)
+			scr.demo_goto(Vector3(-18, 8, 8))
+		var kage := _monster("kage_oni")
+		if kage:
+			kage.demo_goto(Vector3(-10, 0.5, -12))
 		_dof(false))
-	_ev(37.4, func() -> void:
-		var g: MonsterBase = monsters.get("genbu")
-		if g:
-			g.global_position = Vector3(-40, 0.5, 29)
-			g.demo_goto(Vector3(-30, 0.5, 20)))
-	_ev(45.4, func() -> void:
-		var k: MonsterBase = monsters.get("toshikui")
-		if k:
-			k.global_position = Vector3(14, 0.5, -175)
-			k.demo_goto(Vector3(-8, 0.5, -125))
-		_dof(false))
-	_ev(53.9, func() -> void:
-		player.global_position = Vector3(0, 0.5, 16)
-		player.command_move_to(Vector3(0, 0.5, 10))
-		_hero_lights(Vector3(0, 1.6, 10))
-		_dof(true, 8.0))
+
+	# --- 46s トシクイ接近 ---
+	_ev(46.1, func() -> void:
+		var kaiju := _monster("toshikui")
+		if kaiju:
+			kaiju.global_position = Vector3(12, 0.5, -185)
+			kaiju.demo_goto(Vector3(0, 0.5, -128)))
+
+	# --- 52s 決意: 構えの主人公 + タイトル ---
+	_ev(52.1, func() -> void:
+		player.global_position = Vector3(0, 0.6, 8)
+		player.has_move_target = false
+		player.set_visual_yaw(PI)  # トシクイの方 (-Z) を向く
+		player.command_face(Vector3(0, 0, -1))
+		var pose := player.anim_for("idle")
+		if pose != "":
+			player.command_play(pose, 8.0)
+		_hero_lights(Vector3(0, 1.6, 8))
+		_dof(true, 9.0))
+
 	_events.sort_custom(func(a, b) -> bool: return a["t"] < b["t"])
 
 
-## ヒーローショット用の簡易3灯 (キー / リム)
+# ------------------------------------------------------------------ 演出ヘルパ
+
+## スポーン/衝撃の閃光: 膨張して消える発光球 + ライト
+func _flash_burst(pos: Vector3, color: Color, size: float) -> void:
+	var mi := MeshInstance3D.new()
+	mi.mesh = MatLib.sphere(1.0)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(color.r, color.g, color.b, 0.8)
+	mat.emission_enabled = true
+	mat.emission = color
+	mat.emission_energy_multiplier = 6.0
+	mi.material_override = mat
+	add_child(mi)
+	mi.global_position = pos
+	mi.scale = Vector3.ONE * 0.3
+	var l := OmniLight3D.new()
+	l.light_color = color
+	l.light_energy = 12.0
+	l.omni_range = size * 3.0
+	add_child(l)
+	l.global_position = pos
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(mi, "scale", Vector3.ONE * size, 0.55).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mi, "transparency", 1.0, 0.55)
+	tw.tween_property(l, "light_energy", 0.0, 0.6)
+	tw.chain().tween_callback(func() -> void:
+		mi.queue_free()
+		l.queue_free())
+
+
+## ヒーローショット用の簡易2灯 (キー / リム)
 func _hero_lights(center: Vector3) -> void:
 	var key := OmniLight3D.new()
 	key.light_color = Color(1.0, 0.88, 0.75)
-	key.light_energy = 1.4
+	key.light_energy = 1.6
 	key.omni_range = 10.0
-	key.position = center + Vector3(2.5, 1.2, 3.0)
+	key.position = center + Vector3(2.5, 1.2, -3.0)
 	add_child(key)
 	var rim := OmniLight3D.new()
 	rim.light_color = Color(0.4, 0.7, 1.0)
-	rim.light_energy = 2.2
+	rim.light_energy = 2.4
 	rim.omni_range = 9.0
-	rim.position = center + Vector3(-1.5, 2.0, -3.0)
+	rim.position = center + Vector3(-1.5, 2.2, 3.0)
 	add_child(rim)
 
 
@@ -197,14 +307,11 @@ func _process(delta: float) -> void:
 		(_events[_next_event]["fn"] as Callable).call()
 		_next_event += 1
 	_update_camera()
-	_update_overlay()
+	_update_overlay(delta)
 	if t >= DURATION + 0.2:
 		_finished = true
-		if OS.has_feature("movie"):
-			get_tree().quit()
-		else:
-			print("[Demo] 60秒デモ終了")
-			get_tree().quit()
+		print("[Demo] 60秒デモ終了")
+		get_tree().quit()
 
 
 func _update_camera() -> void:
@@ -219,10 +326,11 @@ func _update_camera() -> void:
 	var e := u * u * (3.0 - 2.0 * u)
 
 	if shot["type"] == "orbit":
-		var center := Vector3.ZERO
+		var center := _last_look
 		var node := _target_node(shot["target"])
 		if node:
 			center = node.global_position + shot["target_off"]
+			_last_look = center
 		var ang := lerpf(shot["a0"], shot["a1"], e)
 		var radius := lerpf(shot["r0"], shot["r1"], e)
 		var h := lerpf(shot["h0"], shot["h1"], e)
@@ -234,9 +342,14 @@ func _update_camera() -> void:
 		var look: Vector3
 		if shot["target"] != "":
 			var node := _target_node(shot["target"])
-			look = (node.global_position + shot["target_off"]) if node else Vector3.ZERO
+			if node:
+				look = node.global_position + shot["target_off"]
+				_last_look = look
+			else:
+				look = _last_look  # 撃破直後などはその場を見続ける
 		else:
 			look = (shot["look_from"] as Vector3).lerp(shot["look_to"], e)
+			_last_look = look
 		cam.fov = lerpf(shot["fov0"], shot["fov1"], e)
 		if pos.distance_to(look) > 0.5:
 			cam.look_at_from_position(pos, look, Vector3.UP)
@@ -295,16 +408,55 @@ func _build_overlay() -> void:
 	_subtitle.modulate.a = 0.0
 	layer.add_child(_subtitle)
 
+	# 章ラベル (物語の進行を明示)
+	_chapter = Label.new()
+	_chapter.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_chapter.anchor_left = 0.04
+	_chapter.anchor_right = 0.6
+	_chapter.anchor_top = 0.865
+	_chapter.anchor_bottom = 0.91
+	_chapter.add_theme_font_size_override("font_size", 26)
+	_chapter.add_theme_color_override("font_color", Color(0.95, 0.95, 1.0, 0.9))
+	_chapter.add_theme_constant_override("outline_size", 6)
+	_chapter.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	layer.add_child(_chapter)
 
-func _update_overlay() -> void:
-	# 冒頭フェードイン / 最後フェードアウト
-	var a := 0.0
+
+const CHAPTERS := [
+	[0.5, 6.0, "AM 2:47 — 渋谷、いつもの雨"],
+	[7.5, 12.5, "空が、裂けた"],
+	[13.5, 19.0, "\"それら\" は街に降りた"],
+	[20.0, 25.5, "迎え撃つ者、ただひとり"],
+	[27.0, 33.0, "一体目、撃破"],
+	[34.0, 41.0, "鬼との死闘"],
+	[42.0, 51.5, "だが、奴らは止まらない"],
+	[52.5, 58.0, "それでも、渋谷を守る"],
+]
+
+
+func _update_overlay(delta: float) -> void:
+	# 黒フェード (冒頭/最後) + 白閃光 (裂け目誕生)
+	var black_a := 0.0
 	if t < 2.0:
-		a = 1.0 - t / 2.0
-	elif t > 58.2:
-		a = (t - 58.2) / 1.8
-	_fade.color.a = clampf(a, 0.0, 1.0)
-	# タイトル 54.5→56 フェードイン
-	var ta := clampf((t - 54.5) / 1.5, 0.0, 1.0)
-	_title.modulate.a = ta
+		black_a = 1.0 - t / 2.0
+	elif t > 58.3:
+		black_a = (t - 58.3) / 1.7
+	if _white > 0.0:
+		_white = maxf(_white - delta * 1.1, 0.0)
+	if _white > black_a:
+		_fade.color = Color(1, 1, 1, clampf(_white, 0.0, 1.0))
+	else:
+		_fade.color = Color(0, 0, 0, clampf(black_a, 0.0, 1.0))
+	# タイトル
+	_title.modulate.a = clampf((t - 54.5) / 1.5, 0.0, 1.0)
 	_subtitle.modulate.a = clampf((t - 55.5) / 1.5, 0.0, 1.0)
+	# 章ラベル (フェードイン/アウト)
+	var ch_alpha := 0.0
+	var ch_text := ""
+	for ch in CHAPTERS:
+		if t >= ch[0] - 0.5 and t <= ch[1] + 0.5:
+			ch_text = ch[2]
+			ch_alpha = clampf((t - ch[0] + 0.5) / 0.6, 0.0, 1.0) * clampf((ch[1] + 0.5 - t) / 0.6, 0.0, 1.0)
+			break
+	_chapter.text = ch_text
+	_chapter.modulate.a = ch_alpha
