@@ -107,6 +107,45 @@ func set_param(param: String, value: Variant) -> void:
 		m.set_shader_parameter(param, value)
 
 
+## 常時エフェクト (残り火 / 雫 / 光の粒)。加算合成の小さなクアッドを漂わせる。
+func fx_particles(parent: Node3D, color: Color, amount: int, extents: Vector3,
+		velocity: Vector3, size: float, life: float, pos: Vector3 = Vector3.ZERO) -> GPUParticles3D:
+	var p := GPUParticles3D.new()
+	p.amount = amount
+	p.lifetime = life
+	p.preprocess = life
+	p.visibility_aabb = AABB(-extents * 2.0 - Vector3.ONE * 4.0, extents * 4.0 + Vector3.ONE * 8.0)
+	var mat := ParticleProcessMaterial.new()
+	mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	mat.emission_box_extents = extents
+	mat.direction = velocity.normalized() if velocity.length() > 0.01 else Vector3.UP
+	mat.initial_velocity_min = velocity.length() * 0.6
+	mat.initial_velocity_max = velocity.length() * 1.3
+	mat.gravity = Vector3.ZERO
+	mat.turbulence_enabled = true
+	mat.turbulence_noise_strength = 0.6
+	mat.turbulence_noise_scale = 4.0
+	mat.scale_min = 0.7
+	mat.scale_max = 1.4
+	p.process_material = mat
+	var quad := QuadMesh.new()
+	quad.size = Vector2(size, size)
+	var qmat := StandardMaterial3D.new()
+	qmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	qmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	qmat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	qmat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	qmat.albedo_color = Color(color.r, color.g, color.b, 0.35)
+	qmat.emission_enabled = true
+	qmat.emission = color
+	qmat.emission_energy_multiplier = 2.0
+	quad.material = qmat
+	p.draw_pass_1 = quad
+	p.position = pos
+	parent.add_child(p)
+	return p
+
+
 # ------------------------------------------------------------------ AI
 
 func _physics_process(delta: float) -> void:
@@ -216,6 +255,8 @@ func _die() -> void:
 			c.set_deferred("disabled", true)
 	var tw := create_tween()
 	tw.tween_method(func(v: float) -> void: set_param("dissolve", v), 0.0, 1.0, 1.6)
+	# シェーダー以外のパーツ (牙・金属など) は最後に縮んで消える
+	tw.parallel().tween_property(visual, "scale", Vector3.ONE * 0.02, 0.5).set_delay(1.15)
 	tw.tween_callback(queue_free)
 
 

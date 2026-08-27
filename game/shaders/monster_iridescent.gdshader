@@ -42,11 +42,18 @@ void fragment() {
 	// 体を走るストライプ
 	float stripe = smoothstep(0.75, 0.98, sin(wpos.y * stripe_freq + wpos.x * 2.0 - TIME * stripe_speed));
 
-	ALBEDO = base_color + iri * fres * 0.35;
+	// 装甲パネルの継ぎ目 (擬似六角グリッド)
+	vec2 g = vec2(wpos.x + wpos.z * 0.5 + wpos.y * 0.3, wpos.z * 0.866 + wpos.y * 0.7) * 5.0;
+	vec2 gf = abs(fract(g) - 0.5);
+	float seam = smoothstep(0.42, 0.485, max(gf.x, gf.y));
+	float panel_var = hash13(vec3(floor(g), 1.0));
+
+	ALBEDO = (base_color + iri * fres * 0.35) * (1.0 - seam * 0.5) * (0.9 + panel_var * 0.2);
 	METALLIC = 0.85;
-	ROUGHNESS = 0.22;
+	ROUGHNESS = 0.18 + seam * 0.35 + panel_var * 0.08;
 	SPECULAR = 0.7;
-	EMISSION = stripe_color * stripe * stripe_emission
+	EMISSION = stripe_color * stripe * stripe_emission * (1.0 - seam * 0.7)
+			+ stripe_color * seam * 0.25
 			+ iri * fres * 1.2
 			+ vec3(1.0) * hit_flash * 3.0;
 }

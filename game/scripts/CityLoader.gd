@@ -124,24 +124,136 @@ func _spawn_block(rng: RandomNumberGenerator, cx: float, cz: float, dist: float)
 		var h := rng.randf_range(12, 40) + closeness * rng.randf_range(20, 110)
 		var ox := rng.randf_range(-8, 8)
 		var oz := rng.randf_range(-8, 8)
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(w, h, d)
-		var mi := MeshInstance3D.new()
-		mi.name = "Bldg_%d_%d_%d" % [cx, cz, i]
-		mi.mesh = mesh
-		mi.material_override = _facade_material
-		mi.position = Vector3(cx + ox, h * 0.5, cz + oz)
-		mi.rotation.y = rng.randf_range(-0.06, 0.06)
-		mi.gi_mode = GeometryInstance3D.GI_MODE_STATIC
-		add_child(mi)
-		var body := StaticBody3D.new()
-		var cs := CollisionShape3D.new()
-		var shape := BoxShape3D.new()
-		shape.size = mesh.size
-		cs.shape = shape
-		body.add_child(cs)
-		mi.add_child(body)
+		_spawn_building(rng, Vector3(cx + ox, 0, cz + oz), w, d, h, closeness)
 		building_count += 1
+
+
+## アーキタイプ付きビル1棟: 基壇 + タワー + セットバック + パラペット + 屋上設備 + 看板
+func _spawn_building(rng: RandomNumberGenerator, base_pos: Vector3,
+		w: float, d: float, h: float, closeness: float) -> void:
+	var b := Node3D.new()
+	b.name = "Bldg"
+	b.position = base_pos
+	b.rotation.y = rng.randf_range(-0.06, 0.06)
+	add_child(b)
+
+	var concrete := MatLib.concrete_fallback()
+	var metal := MatLib.metal(Color(0.5, 0.52, 0.55), 0.5)
+
+	# --- 基壇 (ポディウム) ---
+	var podium_h := 0.0
+	if h > 28.0 and rng.randf() < 0.7:
+		podium_h = rng.randf_range(5.0, 9.0)
+		_box_part(b, Vector3(w * 1.18, podium_h, d * 1.18), Vector3(0, podium_h * 0.5, 0), _facade_material)
+		_box_part(b, Vector3(w * 1.22, 0.5, d * 1.22), Vector3(0, podium_h + 0.25, 0), concrete)
+
+	# --- タワー本体 (+セットバック) ---
+	var tower_h := h - podium_h
+	var setback := h > 55.0 and rng.randf() < 0.55
+	var lower_h := tower_h * (0.62 if setback else 1.0)
+	_box_part(b, Vector3(w, lower_h, d), Vector3(0, podium_h + lower_h * 0.5, 0), _facade_material)
+	var top_y := podium_h + lower_h
+	var top_w := w
+	var top_d := d
+	if setback:
+		top_w = w * rng.randf_range(0.6, 0.78)
+		top_d = d * rng.randf_range(0.6, 0.78)
+		var upper_h := tower_h - lower_h
+		_box_part(b, Vector3(top_w, upper_h, top_d), Vector3(0, top_y + upper_h * 0.5, 0), _facade_material)
+		# 下段屋上のパラペット
+		_box_part(b, Vector3(w + 0.5, 0.7, d + 0.5), Vector3(0, top_y + 0.35, 0), concrete)
+		top_y += upper_h
+
+	# --- 屋上: パラペット + 設備 ---
+	_box_part(b, Vector3(top_w + 0.4, 0.8, top_d + 0.4), Vector3(0, top_y + 0.4, 0), concrete)
+	var roof_y := top_y + 0.8
+	for _k in rng.randi_range(1, 3):  # 室外機・キュービクル
+		_box_part(b, Vector3(rng.randf_range(1.5, 3.5), rng.randf_range(1.0, 2.0), rng.randf_range(1.5, 3.0)),
+				Vector3(rng.randf_range(-0.3, 0.3) * top_w, roof_y + 0.8, rng.randf_range(-0.3, 0.3) * top_d),
+				metal)
+	if rng.randf() < 0.5:  # ペントハウス (階段室)
+		_box_part(b, Vector3(top_w * 0.3, 3.0, top_d * 0.3),
+				Vector3(top_w * 0.25, roof_y + 1.5, -top_d * 0.2), _facade_material)
+	if rng.randf() < 0.4:  # 高架水槽
+		var tank := MatLib.mesh_node(MatLib.cone(1.1, 2.4, 1.1), metal,
+				Vector3(-top_w * 0.28, roof_y + 2.0, top_d * 0.25))
+		b.add_child(tank)
+		_box_part(b, Vector3(0.25, 1.6, 0.25), Vector3(-top_w * 0.28, roof_y + 0.6, top_d * 0.25), metal)
+	if h > 45.0 and rng.randf() < 0.6:  # アンテナ + 航空障害灯
+		var mast_h := rng.randf_range(5.0, 12.0)
+		_box_part(b, Vector3(0.22, mast_h, 0.22), Vector3(0, roof_y + mast_h * 0.5, 0), metal)
+		var beacon := MatLib.mesh_node(MatLib.sphere(0.28), MatLib.emissive(Color(1.0, 0.1, 0.08), 5.0),
+				Vector3(0, roof_y + mast_h + 0.2, 0))
+		b.add_child(beacon)
+	if closeness > 0.5 and rng.randf() < 0.35:  # 屋上ビルボード
+		_rooftop_billboard(b, rng, top_w, top_d, roof_y)
+	if closeness > 0.4 and h > 25.0 and rng.randf() < 0.5:  # 壁面の縦看板
+		_vertical_sign(b, rng, w, d, minf(h, 40.0))
+
+	# --- 当たり判定 (タワー + 基壇をまとめて1箱) ---
+	var body := StaticBody3D.new()
+	var cs := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(maxf(w, top_w) * (1.18 if podium_h > 0 else 1.0), h, maxf(d, top_d) * (1.18 if podium_h > 0 else 1.0))
+	cs.shape = shape
+	cs.position.y = h * 0.5
+	body.add_child(cs)
+	b.add_child(body)
+
+
+func _box_part(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> void:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = mat
+	mi.position = pos
+	mi.gi_mode = GeometryInstance3D.GI_MODE_STATIC
+	parent.add_child(mi)
+
+
+func _rooftop_billboard(b: Node3D, rng: RandomNumberGenerator, top_w: float, top_d: float, roof_y: float) -> void:
+	var bw := clampf(top_w * 0.8, 4.0, 14.0)
+	var bh := bw * 0.45
+	var frame := MatLib.metal(Color(0.3, 0.3, 0.32), 0.6)
+	_box_part(b, Vector3(0.3, bh * 0.6, 0.3), Vector3(-bw * 0.35, roof_y + bh * 0.3, 0), frame)
+	_box_part(b, Vector3(0.3, bh * 0.6, 0.3), Vector3(bw * 0.35, roof_y + bh * 0.3, 0), frame)
+	var quad := QuadMesh.new()
+	quad.size = Vector2(bw, bh)
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://shaders/neon_holo.gdshader")
+	mat.set_shader_parameter("scroll_speed", rng.randf_range(0.15, 0.5))
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad
+	mi.material_override = mat
+	mi.position = Vector3(0, roof_y + bh * 0.6 + bh * 0.5, 0)
+	mi.rotation.y = rng.randf_range(0, TAU)
+	b.add_child(mi)
+
+
+func _vertical_sign(b: Node3D, rng: RandomNumberGenerator, w: float, d: float, max_h: float) -> void:
+	var sh := rng.randf_range(8.0, minf(max_h - 6.0, 18.0))
+	var sw := rng.randf_range(1.4, 2.2)
+	var y := rng.randf_range(5.0, max_h - sh)
+	var sides: Array = [Vector3(w * 0.5 + sw * 0.55, 0, d * 0.3), Vector3(-w * 0.5 - sw * 0.55, 0, -d * 0.25),
+			Vector3(w * 0.3, 0, d * 0.5 + sw * 0.55)]
+	var side: Vector3 = sides[rng.randi() % 3]
+	var box := BoxMesh.new()
+	box.size = Vector3(sw, sh, 0.5)
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://shaders/neon_holo.gdshader")
+	var hues := [[Color(1.0, 0.1, 0.4), Color(1.0, 0.7, 0.1)], [Color(0.1, 0.9, 0.9), Color(0.9, 0.2, 1.0)],
+			[Color(0.2, 1.0, 0.4), Color(1.0, 0.9, 0.2)]]
+	var pair: Array = hues[rng.randi() % hues.size()]
+	mat.set_shader_parameter("color_a", pair[0])
+	mat.set_shader_parameter("color_b", pair[1])
+	mat.set_shader_parameter("glyph_density", 4.0)
+	mat.set_shader_parameter("scroll_speed", rng.randf_range(0.1, 0.3))
+	var mi := MeshInstance3D.new()
+	mi.mesh = box
+	mi.material_override = mat
+	mi.position = side + Vector3(0, y + sh * 0.5, 0)
+	b.add_child(mi)
 
 
 # ------------------------------------------------------------------ 路面

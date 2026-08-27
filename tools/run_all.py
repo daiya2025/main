@@ -32,6 +32,8 @@ def main():
     ap.add_argument("--tex-res", default="2k")
     args = ap.parse_args()
 
+    ok_ch = step("キャラクターモデル取得 (Godette / Mannequiny)",
+                 [TOOLS / "fetch_characters.py"])
     ok_ph = step("Poly Haven アセット取得",
                  [TOOLS / "fetch_polyhaven.py", "--hdri-res", args.hdri_res, "--tex-res", args.tex_res])
     ok_pl = step("PLATEAU 渋谷駅周辺 取得・変換",
@@ -44,6 +46,7 @@ def main():
         step("60秒デモ MP4 生成", cmd)
 
     print("\n" + "=" * 60)
+    print(f" キャラクター: {'OK' if ok_ch else 'FAILED (パラメトリック人体で動作)'}")
     print(f" Poly Haven: {'OK' if ok_ph else 'FAILED (ゲームはフォールバック品質で動作)'}")
     print(f" PLATEAU   : {'OK' if ok_pl else 'FAILED (ゲームは手続き生成の街で動作)'}")
     print(" 次: Godot 4.4 で game/project.godot を開き、F5 で実行")

@@ -62,10 +62,16 @@ void fragment() {
 	float crack = smoothstep(0.055, 0.015, ridge) * patch;
 	float pulse = 0.7 + 0.3 * sin(TIME * 1.8 + wpos.y * 0.8);
 
-	ALBEDO = mix(rock_color * (0.7 + 0.6 * n), vec3(0.01), crack);
-	ROUGHNESS = mix(0.35, 0.9, crack);
-	METALLIC = 0.1;
+	// 微細な岩肌の凹凸 + 鉱物のきらめき
+	float micro = fbm(wpos * crack_scale * 6.0);
+	float glint = step(0.992, hash13(floor(wpos * 42.0) + floor(TIME * 0.5)));
+
+	ALBEDO = mix(rock_color * (0.7 + 0.6 * n) * (0.85 + 0.3 * micro), vec3(0.01), crack);
+	ROUGHNESS = mix(0.3 + micro * 0.25, 0.9, crack);
+	METALLIC = 0.12;
 	SPECULAR = 0.6;
+	NORMAL = normalize(NORMAL + vec3(micro - 0.5, micro * 0.7 - 0.35, 0.0) * 0.35);
 	EMISSION = magma_color * (crack * pulse + burn_edge * 2.5) * magma_emission
+			+ magma_color * glint * 1.5
 			+ vec3(1.0) * hit_flash * 3.0;
 }

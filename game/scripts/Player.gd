@@ -1,7 +1,9 @@
 class_name Player
 extends CharacterBody3D
 ## 三人称プレイヤー。
-## - HumanBuilder の関節階層を手続きウォークサイクルで駆動 (glb 差し替え時は AnimationPlayer 再生)
+## - CharacterRig が用意する実3Dモデル (Godette / Mannequiny / カスタムglb) を
+##   スケルタルアニメーション (idle/walk/run/jump/land/attack) で駆動。
+##   モデルが無い環境では HumanBuilder のパラメトリック人体+手続きアニメにフォールバック。
 ## - SpringArm カメラ + マウスルック + スプリント / ジャンプ / 近接攻撃
 ## - DemoDirector からの外部制御 (external_control) に対応
 
@@ -24,8 +26,12 @@ var move_target: Vector3
 var has_move_target := false
 
 var _joints: Dictionary = {}
-var _custom_model := false
-var _anim_player: AnimationPlayer
+var _anim: AnimationPlayer
+var _anim_map: Dictionary = {}
+var _anim_lock := 0.0
+var _air_prev := false
+var _attack_idx := 0
+var rig_kind := "parametric"
 var _walk_phase := 0.0
 var _idle_time := 0.0
 var _attack_cd := 0.0
@@ -49,14 +55,14 @@ func _ready() -> void:
 	cs.position.y = 0.875
 	add_child(cs)
 
-	# 外見
-	var human := HumanBuilder.build()
-	_visual = human["root"]
-	_joints = human["joints"]
-	_custom_model = human["custom"]
+	# 外見 (実3Dモデル優先 / CharacterRig 参照)
+	var rig := CharacterRig.build()
+	_visual = rig["root"]
+	_joints = rig["joints"]
+	_anim = rig["anim"]
+	_anim_map = rig["map"]
+	rig_kind = rig["kind"]
 	add_child(_visual)
-	if _custom_model:
-		_anim_player = _find_anim_player(_visual)
 
 	# カメラリグ
 	cam_yaw = Node3D.new()
@@ -80,16 +86,6 @@ func _ready() -> void:
 	if not external_control:
 		camera.current = true
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-
-
-func _find_anim_player(node: Node) -> AnimationPlayer:
-	if node is AnimationPlayer:
-		return node
-	for c in node.get_children():
-		var found := _find_anim_player(c)
-		if found:
-			return found
-	return null
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -133,6 +129,8 @@ func _physics_process(delta: float) -> void:
 		input_dir = Vector2(dir.x, dir.z).normalized() * raw.length()
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = JUMP_VELOCITY
+			if _anim and _anim_map.has("jump_up"):
+				_play_once(_anim_map["jump_up"], 0.3)
 		if Input.is_action_just_pressed("attack"):
 			_try_attack()
 
@@ -157,11 +155,8 @@ func _physics_process(delta: float) -> void:
 # ------------------------------------------------------------------ アニメーション
 
 func _animate(delta: float, speed: float) -> void:
-	if _custom_model:
-		if _anim_player:
-			var want := "walk" if speed > 0.5 else "idle"
-			if _anim_player.has_animation(want) and _anim_player.current_animation != want:
-				_anim_player.play(want, 0.25)
+	if _anim and not _anim_map.is_empty():
+		_animate_rigged(delta, speed)
 		return
 	if _joints.is_empty():
 		return
@@ -194,6 +189,40 @@ func _animate(delta: float, speed: float) -> void:
 	_joints["head"].rotation.y = sin(_idle_time * 0.4) * 0.06 * (1.0 - blend)
 
 
+## 実モデルのアニメーションステートマシン
+func _animate_rigged(delta: float, speed: float) -> void:
+	_anim_lock = maxf(_anim_lock - delta, 0.0)
+	var on_floor := is_on_floor()
+	if on_floor and _air_prev and _anim_map.has("land"):
+		_play_once(_anim_map["land"], 0.3)
+	_air_prev = not on_floor
+	if _anim_lock > 0.0:
+		return
+	var target: String
+	var cadence := 1.0
+	if not on_floor:
+		target = _anim_map.get("jump_air", "")
+	elif speed > WALK_SPEED * 1.25:
+		target = _anim_map.get("run", "")
+		cadence = clampf(speed / SPRINT_SPEED, 0.85, 1.25)
+	elif speed > 0.5:
+		target = _anim_map.get("walk", "")
+		cadence = clampf(speed / WALK_SPEED, 0.7, 1.4)
+	else:
+		target = _anim_map.get("idle", "")
+	if target != "" and _anim.has_animation(target):
+		if _anim.current_animation != target:
+			_anim.play(target, 0.25)
+		_anim.speed_scale = cadence
+
+
+func _play_once(anim_name: String, lock: float) -> void:
+	if _anim and _anim.has_animation(anim_name):
+		_anim.speed_scale = 1.0
+		_anim.play(anim_name, 0.12)
+		_anim_lock = lock
+
+
 # ------------------------------------------------------------------ 戦闘
 
 func _try_attack() -> void:
@@ -201,8 +230,12 @@ func _try_attack() -> void:
 		return
 	_attack_cd = ATTACK_COOLDOWN
 	_attack_anim = 1.0
+	if _anim and _anim_map.has("attack"):
+		var attacks: Array = _anim_map["attack"]
+		_play_once(attacks[_attack_idx % attacks.size()], 0.45)
+		_attack_idx += 1
 	_spawn_slash_vfx()
-	var fwd := -_visual.global_transform.basis.z
+	var fwd := _visual.global_transform.basis.z  # キャラは +Z 前
 	for m in get_tree().get_nodes_in_group("monsters"):
 		var monster := m as Node3D
 		if monster == null or not monster.has_method("hit"):

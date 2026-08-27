@@ -46,9 +46,18 @@ static func run(main: Node3D, city: CityLoader, env: Dictionary, monsters: Dicti
 	rows.append(["モンスター", mini(m_score, 100), "%d/5 種 (専用シェーダー+手続きアニメ)" % monsters.size()])
 
 	# --- 人間 ---
-	var human_score := 100 if ResourceLoader.exists(HumanBuilder.CUSTOM_GLB) else 70
-	rows.append(["人間造形", human_score,
-			"カスタム glb 使用" if human_score == 100 else "パラメトリック人体 (assets/characters/player.glb で置換可)"])
+	var human_score := 70
+	var human_note := "パラメトリック人体 (tools/fetch_characters.py で実モデル化)"
+	if ResourceLoader.exists(CharacterRig.CUSTOM_GLB):
+		human_score = 100
+		human_note = "カスタム glb (フォトスキャン級)"
+	elif ResourceLoader.exists(CharacterRig.GODETTE_GLB):
+		human_score = 95
+		human_note = "Godette 39k頂点 + 4K PBR + 55スケルタルアニメ (CC-BY)"
+	elif ResourceLoader.exists(CharacterRig.MANNEQUIN_GLB):
+		human_score = 85
+		human_note = "Mannequiny リグ + 10スケルタルアニメ (CC-BY)"
+	rows.append(["人間造形", human_score, human_note])
 
 	# --- カメラワーク ---
 	rows.append(["カメラ/デモ", 100, "8ショット60秒シネマティック + Movie Maker 書き出し"])

@@ -76,8 +76,8 @@ func _build_neon_billboards() -> void:
 		# ネオンの照り返し
 		var l := OmniLight3D.new()
 		l.light_color = colors[0].lerp(colors[1], 0.5)
-		l.light_energy = 1.6
-		l.omni_range = 22.0
+		l.light_energy = 2.4
+		l.omni_range = 26.0
 		l.position = pos + Vector3(0, -2, 0)
 		l.shadow_enabled = false
 		add_child(l)
@@ -101,8 +101,8 @@ func _build_streetlights() -> void:
 		add_child(MatLib.mesh_node(MatLib.sphere(0.14, Vector3(1, 0.5, 1)), lamp_mat, lamp_pos))
 		var l := OmniLight3D.new()
 		l.light_color = Color(1.0, 0.82, 0.55)
-		l.light_energy = 2.4
-		l.omni_range = 16.0
+		l.light_energy = 3.8
+		l.omni_range = 22.0
 		l.omni_attenuation = 1.4
 		l.position = lamp_pos + Vector3(0, -0.3, 0)
 		l.shadow_enabled = i % 3 == 0  # 影は間引いて品質と負荷のバランスを取る

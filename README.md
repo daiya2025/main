@@ -44,6 +44,10 @@ setup_windows.bat
 
 これだけで以下が走ります (合計数GBのダウンロード、初回 10〜40分):
 
+0. **キャラクター** (`tools/fetch_characters.py`) — リグ+スケルタルアニメ付きの実3Dモデルを取得
+   - **Godette** (Godot 公式 TPS デモ, CC-BY 3.0): 約39,000頂点 / 4K PBR (albedo+ORM+normal+emissive) /
+     55 アニメーション (idle・walk・run・4段階ジャンプ・怯み 他) → プレイヤーとして自動使用
+   - **Mannequiny** (GDQuest, CC-BY 4.0): 軽量フォールバック (idle/run/jump/punch/kick)
 1. **Poly Haven** (`tools/fetch_polyhaven.py`) — 公式 API で
    夜/夕/昼の HDRI (4K)、アスファルト・歩道・コンクリート等の PBR 5セット、
    写真測量された樹木4種・岩4種 (glTF) を取得 → `game/assets/polyhaven/`
@@ -89,12 +93,20 @@ ffmpeg (x264 CRF16) で `output/shibuya_rift_demo_*.mp4` に変換します。
   路面は fbm 水たまり + 雨滴リップル + SSR の濡れ表現
 - **ライティング**: HDRI IBL + SDFGI + SSR + SSAO + SSIL + ボリュメトリックフォグ +
   ACES トーンマップ + ブルーム + 街灯/ネオン数十灯 (クラスタード) + 雨 6000 粒
-- **人間**: 関節階層パラメトリック人体 (SSSスキン/布/レザー/異方性ヘア) +
-  手続きウォークサイクル。`game/assets/characters/player.glb` を置くと
-  フォトスキャン級モデル (Mixamo 等、`walk`/`idle` アニメ付き glb) に自動差し替え
-- **モンスター5種**: カゲオニ (黒曜石+マグマ) / ネオンリッパー (玉虫色高速ラプトル) /
-  ゲンブ (ルーン石亀) / スクランブラー (半透明浮遊体) / トシクイ (20m級怪獣)。
-  全種が専用シェーダー・手続きアニメ・AI・被弾フラッシュ・ディゾルブ消滅を持つ
+- **人間**: 実3Dモデル + スケルタルアニメーション。優先順:
+  ① `player.glb` (ユーザー差し替え: フォトスキャン/Mixamo等) → ② Godette (39k頂点+4K PBR+55アニメ)
+  → ③ Mannequiny → ④ パラメトリック人体。
+  idle/walk/run のブレンド、ジャンプ3段階 (踏切/滞空/着地)、攻撃モーションを速度連動で自動再生
+- **建物ディテール**: 手続き生成ビルは基壇+タワー+セットバック+パラペット+屋上設備
+  (室外機・ペントハウス・高架水槽・アンテナ+航空障害灯)+屋上ビルボード+壁面縦看板の
+  アーキタイプ構成。ファサードはパンチ窓/カーテンウォール/リボン窓の3様式 ×
+  マリオン・床スラブ・雨だれ汚れ・1F店舗階 (大開口ガラス+店内光+看板色スピル)・御影石基壇
+- **モンスター5種** (各50〜100パーツの多層造形 + 多関節二次モーション + 常時パーティクル):
+  カゲオニ (肋骨装甲・炉心・鎖枷・膝肘関節・残り火) / ネオンリッパー (首2節・可動顎・歯列・
+  尾5節+フィン・ネオン管・鎌爪・トレイル) / ゲンブ (甲羅六角板・回転ルーン環・苔・嘴・足首関節) /
+  スクランブラー (二重逆回転リング・コアケージ・軌道球・触手8本×4節・膜スカート) /
+  トシクイ (装甲板・炉心格子・背ビレ2列・尾3節+スパイク・3本爪・火の粉)。
+  全種が専用シェーダー (微細法線・鉱物きらめき・装甲継ぎ目)・AI・被弾フラッシュ・ディゾルブ消滅を持つ
 - **カメラ**: クレーン/ドリー/トラッキング/オービットの8ショット + ショット別 DoF +
   レターボックス + タイトル
 
@@ -111,4 +123,7 @@ docs/     QUALITY_LOG.md (自己評価反復ログ) / PIPELINE.md (データフ�
 - 3D都市モデル: [PLATEAU](https://www.mlit.go.jp/plateau/) 渋谷区 2025 (国土交通省, CC BY 4.0) —
   クレジット表記例「出典: 国土交通省 PLATEAU 3D都市モデル (渋谷区)」
 - HDRI / テクスチャ / モデル: [Poly Haven](https://polyhaven.com/) (CC0)
+- プレイヤーキャラクター "Godette": [Godot TPS Demo](https://github.com/godotengine/tps-demo)
+  (c) Juan Linietsky, Fernando Miguel Calabró (CC-BY 3.0)
+- フォールバックキャラクター "Mannequiny": [GDQuest godot-3d-mannequin](https://github.com/gdquest-demos/godot-3d-mannequin) (CC-BY 4.0)
 - コード: このリポジトリのコードは自由に利用してください

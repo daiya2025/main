@@ -7,12 +7,12 @@ extends Object
 
 const PRESETS := {
 	"night": {
-		"sun_energy": 0.30, "sun_color": Color(0.62, 0.72, 1.0),
+		"sun_energy": 0.55, "sun_color": Color(0.62, 0.72, 1.0),
 		"sun_dir": Vector3(-0.35, -0.5, -0.4),
-		"bg_energy": 0.8, "exposure": 1.1,
-		"fog_density": 0.02, "fog_albedo": Color(0.35, 0.42, 0.6),
+		"bg_energy": 1.05, "exposure": 1.4,
+		"fog_density": 0.018, "fog_albedo": Color(0.42, 0.50, 0.68),
 		"night_factor": 1.0, "rain": true,
-		"sky_top": Color(0.02, 0.03, 0.07), "sky_horizon": Color(0.24, 0.14, 0.26),
+		"sky_top": Color(0.035, 0.05, 0.11), "sky_horizon": Color(0.30, 0.19, 0.33),
 	},
 	"dusk": {
 		"sun_energy": 1.1, "sun_color": Color(1.0, 0.55, 0.3),
@@ -72,8 +72,8 @@ static func setup(root: Node3D, preset_name: String) -> Dictionary:
 	env.ssr_fade_out = 2.0
 	env.ssao_enabled = true
 	env.ssao_radius = 2.0
-	env.ssao_intensity = 2.0
-	env.ssao_power = 1.8
+	env.ssao_intensity = 1.4
+	env.ssao_power = 1.5
 	env.ssil_enabled = true
 	env.ssil_radius = 5.0
 	env.ssil_intensity = 1.0
@@ -87,7 +87,8 @@ static func setup(root: Node3D, preset_name: String) -> Dictionary:
 	env.glow_hdr_threshold = 1.1
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.05
+	env.adjustment_brightness = 1.06
+	env.adjustment_contrast = 1.04
 	env.adjustment_saturation = 1.12
 
 	# --- ボリュメトリックフォグ (ネオンの光芒) ---
