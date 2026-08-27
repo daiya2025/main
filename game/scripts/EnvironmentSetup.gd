@@ -12,7 +12,7 @@ const PRESETS := {
 		"bg_energy": 0.8, "exposure": 1.1,
 		"fog_density": 0.02, "fog_albedo": Color(0.35, 0.42, 0.6),
 		"night_factor": 1.0, "rain": true,
-		"sky_top": Color(0.015, 0.02, 0.05), "sky_horizon": Color(0.12, 0.08, 0.16),
+		"sky_top": Color(0.02, 0.03, 0.07), "sky_horizon": Color(0.24, 0.14, 0.26),
 	},
 	"dusk": {
 		"sun_energy": 1.1, "sun_color": Color(1.0, 0.55, 0.3),

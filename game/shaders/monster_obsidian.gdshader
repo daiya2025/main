@@ -4,7 +4,7 @@ render_mode cull_back;
 
 uniform vec3 rock_color : source_color = vec3(0.035, 0.03, 0.04);
 uniform vec3 magma_color : source_color = vec3(1.0, 0.32, 0.05);
-uniform float magma_emission = 7.0;
+uniform float magma_emission = 5.0;
 uniform float crack_scale = 2.2;
 uniform float dissolve : hint_range(0.0, 1.0) = 0.0;
 uniform float hit_flash : hint_range(0.0, 1.0) = 0.0;
@@ -56,9 +56,10 @@ void fragment() {
 	}
 	float burn_edge = smoothstep(dissolve + 0.06, dissolve - 0.04, n);
 
-	// マグマ亀裂: リッジノイズ
+	// マグマ亀裂: リッジノイズ (大域マスクで「冷えた溶岩」風の疎らな亀裂にする)
 	float ridge = abs(fbm(wpos * crack_scale * 1.7 + 10.0) - 0.5) * 2.0;
-	float crack = smoothstep(0.12, 0.02, ridge);
+	float patch = smoothstep(0.35, 0.62, fbm(wpos * 0.45 + 3.0));
+	float crack = smoothstep(0.055, 0.015, ridge) * patch;
 	float pulse = 0.7 + 0.3 * sin(TIME * 1.8 + wpos.y * 0.8);
 
 	ALBEDO = mix(rock_color * (0.7 + 0.6 * n), vec3(0.01), crack);

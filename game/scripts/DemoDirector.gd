@@ -62,18 +62,18 @@ func _build_shots() -> void:
 	# 1. 夜景クレーン: 上空から街と裂け目を見せる
 	_shots.append(_mv(0.0, 9.0, Vector3(-45, 240, 160), Vector3(0, 115, 85),
 			Vector3(0, 15, 0), Vector3(0, 45, -30), 62, 50))
-	# 2. ストリートドリー: 雨の路面と看板、正面に裂け目
-	_shots.append(_mv(9.0, 15.5, Vector3(22, 1.7, 36), Vector3(9, 2.1, 17),
-			Vector3(0, 25, -25), Vector3(0, 45, -30), 55, 50))
+	# 2. ストリートドリー: 濡れた路面から裂け目へティルトアップ
+	_shots.append(_mv(9.0, 15.5, Vector3(22, 2.6, 36), Vector3(9, 2.0, 17),
+			Vector3(0, 2, 8), Vector3(0, 42, -30), 55, 50))
 	# 3. ネオンリッパー疾走トラッキング
 	var s3 := _mv(15.5, 22.5, Vector3(48, 2.6, 22), Vector3(34, 1.1, 4),
 			Vector3.ZERO, Vector3.ZERO, 46, 38, "neon_ripper")
 	s3["target_off"] = Vector3(0, 1.2, 0)
 	_shots.append(s3)
 	# 4. カゲオニ戦闘 ローアングル
-	var s4 := _mv(22.5, 30.5, Vector3(-19, 1.2, -9), Vector3(-27, 2.8, -19),
-			Vector3.ZERO, Vector3.ZERO, 44, 40, "kage_oni")
-	s4["target_off"] = Vector3(0, 3.1, 0)
+	var s4 := _mv(22.5, 30.5, Vector3(-17, 1.6, -6), Vector3(-23, 3.4, -14),
+			Vector3.ZERO, Vector3.ZERO, 46, 42, "kage_oni")
+	s4["target_off"] = Vector3(0, 2.6, 0)
 	_shots.append(s4)
 	# 5. スクランブラー ティルトアップ
 	var s5 := _mv(30.5, 37.5, Vector3(7, 1.6, -8), Vector3(11, 5.5, -12),
@@ -81,14 +81,14 @@ func _build_shots() -> void:
 	s5["target_off"] = Vector3(0, 1.0, 0)
 	_shots.append(s5)
 	# 6. ゲンブ進撃ワイド
-	var s6 := _mv(37.5, 45.5, Vector3(-32, 1.0, 24), Vector3(-45, 2.4, 34),
+	var s6 := _mv(37.5, 45.5, Vector3(-25, 1.4, 14), Vector3(-33, 2.8, 22),
 			Vector3.ZERO, Vector3.ZERO, 46, 42, "genbu")
 	s6["target_off"] = Vector3(0, 1.8, 0)
 	_shots.append(s6)
 	# 7. トシクイ シルエット プッシュイン
-	var s7 := _mv(45.5, 54.0, Vector3(2, 2.5, -45), Vector3(0, 8, -75),
-			Vector3.ZERO, Vector3.ZERO, 42, 30, "toshikui")
-	s7["target_off"] = Vector3(0, 15, 0)
+	var s7 := _mv(45.5, 54.0, Vector3(0, 3, -48), Vector3(3, 13, -86),
+			Vector3.ZERO, Vector3.ZERO, 42, 32, "toshikui")
+	s7["target_off"] = Vector3(0, 14, 0)
 	_shots.append(s7)
 	# 8. ヒーローショット (プレイヤー周回) + タイトル
 	_shots.append({"type": "orbit", "t0": 54.0, "t1": 60.0, "target": "player",
@@ -152,14 +152,31 @@ func _build_events() -> void:
 	_ev(45.4, func() -> void:
 		var k: MonsterBase = monsters.get("toshikui")
 		if k:
-			k.global_position = Vector3(30, 0.5, -260)
-			k.demo_goto(Vector3(-20, 0.5, -170))
+			k.global_position = Vector3(14, 0.5, -175)
+			k.demo_goto(Vector3(-8, 0.5, -125))
 		_dof(false))
 	_ev(53.9, func() -> void:
 		player.global_position = Vector3(0, 0.5, 16)
 		player.command_move_to(Vector3(0, 0.5, 10))
+		_hero_lights(Vector3(0, 1.6, 10))
 		_dof(true, 8.0))
 	_events.sort_custom(func(a, b) -> bool: return a["t"] < b["t"])
+
+
+## ヒーローショット用の簡易3灯 (キー / リム)
+func _hero_lights(center: Vector3) -> void:
+	var key := OmniLight3D.new()
+	key.light_color = Color(1.0, 0.88, 0.75)
+	key.light_energy = 1.4
+	key.omni_range = 10.0
+	key.position = center + Vector3(2.5, 1.2, 3.0)
+	add_child(key)
+	var rim := OmniLight3D.new()
+	rim.light_color = Color(0.4, 0.7, 1.0)
+	rim.light_energy = 2.2
+	rim.omni_range = 9.0
+	rim.position = center + Vector3(-1.5, 2.0, -3.0)
+	add_child(rim)
 
 
 func _dof(enabled: bool, dist: float = 30.0) -> void:
@@ -271,8 +288,8 @@ func _build_overlay() -> void:
 	_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitle.anchor_left = 0.0
 	_subtitle.anchor_right = 1.0
-	_subtitle.anchor_top = 0.54
-	_subtitle.anchor_bottom = 0.60
+	_subtitle.anchor_top = 0.565
+	_subtitle.anchor_bottom = 0.62
 	_subtitle.add_theme_font_size_override("font_size", 28)
 	_subtitle.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0, 0.9))
 	_subtitle.modulate.a = 0.0

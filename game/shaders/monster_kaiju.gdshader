@@ -4,7 +4,7 @@ render_mode cull_back;
 
 uniform vec3 skin_color : source_color = vec3(0.09, 0.10, 0.115);
 uniform vec3 under_glow : source_color = vec3(0.9, 0.12, 0.3);
-uniform float glow_strength = 2.0;
+uniform float glow_strength = 3.0;
 uniform float dissolve : hint_range(0.0, 1.0) = 0.0;
 uniform float hit_flash : hint_range(0.0, 1.0) = 0.0;
 

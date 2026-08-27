@@ -4,7 +4,7 @@ render_mode blend_add, cull_disabled, unshaded, shadows_disabled;
 
 uniform vec3 core_color : source_color = vec3(1.0, 0.15, 0.55);
 uniform vec3 edge_color : source_color = vec3(0.35, 0.1, 1.0);
-uniform float intensity = 14.0;
+uniform float intensity = 9.0;
 
 float hash12(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);

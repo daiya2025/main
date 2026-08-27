@@ -224,8 +224,8 @@ class Genbu extends MonsterBase:
 	func _build_visual(root: Node3D) -> void:
 		var m := shader_mat(SH_OBSIDIAN, {
 			"rock_color": Color(0.14, 0.15, 0.13),
-			"magma_color": Color(0.15, 1.0, 0.55),
-			"magma_emission": 4.5,
+			"magma_color": Color(0.15, 0.9, 0.5),
+			"magma_emission": 3.0,
 			"crack_scale": 1.3,
 		})
 		var eye := MatLib.emissive(Color(0.3, 1.0, 0.5), 7.0)

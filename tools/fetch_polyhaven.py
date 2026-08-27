@@ -119,7 +119,8 @@ def score_asset(asset_id: str, info: dict, keywords: list[str]) -> int:
                    + [c.lower() for c in info.get("categories", [])])
     s = 0
     for kw in keywords:
-        if kw in hay:
+        # 単語境界で照合 ("street" が "tree" に化けるのを防ぐ)
+        if re.search(r"(?<![a-z])" + re.escape(kw) + r"(?![a-z])", hay):
             s += 100
     s += min(info.get("download_count", 0) // 1000, 90)
     return s

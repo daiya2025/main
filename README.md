@@ -15,6 +15,15 @@ Godot 4.4 (Forward+) 製の 3D アクション + 60秒シネマティックデ�
 
 対象環境: **Windows 11 / RAM 64GB / RTX 5080** (RTX 5080 なら全機能を既定値のまま 4K で回せます)
 
+| | |
+|---|---|
+| ![夜景](docs/screenshots/night_city.png) | ![カゲオニ戦](docs/screenshots/kage_oni_battle.png) |
+| ![トシクイ](docs/screenshots/toshikui.png) | ![タイトル](docs/screenshots/title_hero.png) |
+
+*スクリーンショットは CI 環境のソフトウェアレンダリング (互換レンダラ / アセット未取得のフォールバック都市) での撮影。
+RTX 5080 + Forward+ では SDFGI / SSR / SSIL / ボリュメトリックフォグ / TAA が全て有効になり、
+PLATEAU 実測都市 + Poly Haven 実写アセットでさらに品質が上がります。*
+
 ---
 
 ## セットアップ (Windows 11)
