@@ -11,10 +11,12 @@ game/android/
 # --- Downloaded / generated assets (re-fetched by tools/) ---
 downloads/
 output/
-game/assets/polyhaven/
-game/assets/city/
-!game/assets/city/.gitkeep
+game/assets/polyhaven/*
+game/assets/city/*
+game/assets/characters/*
 !game/assets/polyhaven/.gitkeep
+!game/assets/city/.gitkeep
+!game/assets/characters/.gitkeep
 
 # --- OS ---
 Thumbs.db
