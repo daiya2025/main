@@ -15,10 +15,13 @@ Godot 4.4 (Forward+) 製の 3D アクション + 60秒シネマティックデ�
 
 対象環境: **Windows 11 / RAM 64GB / RTX 5080** (RTX 5080 なら全機能を既定値のまま 4K で回せます)
 
+60秒デモは「平穏 → 裂け目誕生 → モンスター出現 → 参戦 → 初撃破 → 死闘 → 増援と巨獣 → 決意」の
+8章構成の物語 (章テロップ付き):
+
 | | |
 |---|---|
-| ![夜景](docs/screenshots/night_city.png) | ![カゲオニ戦](docs/screenshots/kage_oni_battle.png) |
-| ![ストリート](docs/screenshots/street_ripper.png) | ![ゲンブ](docs/screenshots/genbu.png) |
+| ![裂け目誕生](docs/screenshots/rift_birth.png) | ![カゲオニ降臨](docs/screenshots/kage_spawn.png) |
+| ![初撃破](docs/screenshots/first_kill.png) | ![増援](docs/screenshots/reinforcements.png) |
 | ![トシクイ](docs/screenshots/toshikui.png) | ![タイトル](docs/screenshots/title_hero.png) |
 
 *スクリーンショットは CI 環境のソフトウェアレンダリング (互換レンダラ / アセット未取得のフォールバック都市) での撮影。
