@@ -63,6 +63,7 @@ class KageOni extends MonsterBase:
 	var _jaw: Node3D
 	var _chest: MeshInstance3D
 	var _chain: Node3D
+	var _core_mat: StandardMaterial3D
 
 	func _init() -> void:
 		display_name = "カゲオニ"
@@ -96,12 +97,18 @@ class KageOni extends MonsterBase:
 			for side in [-1.0, 1.0]:
 				part(pelvis, MatLib.box(Vector3(0.5, 0.1, 0.35)), m,
 						Vector3(side * 0.35, 0.35 + i * 0.28, 0.42), Vector3(0, side * -12.0, side * -18.0), "Rib%d" % i)
+		_core_mat = core
 		part(pelvis, MatLib.sphere(0.17), core, Vector3(0, 0.95, 0.62), Vector3.ZERO, "Core")
 		for k in 4:
 			var ca := TAU * k / 4.0 + 0.4
 			part(pelvis, MatLib.box(Vector3(0.16, 0.28, 0.07)), m,
 					Vector3(cos(ca) * 0.25, 0.95 + sin(ca) * 0.25, 0.6),
 					Vector3(0, 0, rad_to_deg(ca)), "CorePetal")
+		# 装甲のリベット (鍛造感)
+		var rivet := MatLib.metal(Color(0.55, 0.52, 0.5), 0.4)
+		for rv in [Vector3(-0.25, -0.1, 0.56), Vector3(0.25, -0.1, 0.56),
+				Vector3(-0.3, -0.42, 0.5), Vector3(0.3, -0.42, 0.5)]:
+			part(pelvis, MatLib.sphere(0.035), rivet, rv, Vector3.ZERO, "Rivet")
 
 		# 背中の棘 (5本グラデーション) + 肩甲骨フィン
 		for i in 5:
@@ -145,6 +152,10 @@ class KageOni extends MonsterBase:
 			part(ej, MatLib.capsule(0.19, 1.0), m, Vector3(0, -0.5, 0.06), Vector3(6, 0, 0), "ForeArm")
 			part(ej, MatLib.box(Vector3(0.3, 0.4, 0.3)), iron, Vector3(0, -0.45, 0.08), Vector3(4, 0, 0), "Bracer")
 			part(ej, MatLib.box(Vector3(0.28, 0.3, 0.28)), iron, Vector3(0, -0.75, 0.1), Vector3(4, 0, 0), "Bracer2")
+			# 前腕のマグマ排熱ベント
+			for vk in 2:
+				part(ej, MatLib.box(Vector3(0.03, 0.22, 0.06)), core,
+						Vector3(side * 0.17, -0.42 - vk * 0.3, 0.12), Vector3(4, 0, side * -8.0), "Vent")
 			part(ej, MatLib.sphere(0.30), m, Vector3(0, -1.05, 0.12), Vector3.ZERO, "Fist")
 			for k in 4:
 				part(ej, MatLib.cone(0.035, 0.16), tusk,
@@ -219,6 +230,9 @@ class KageOni extends MonsterBase:
 		_head.rotation.y = sin(anim_time * 0.5) * 0.3 * (1.0 - speed01)
 		_chain.rotation.x = sin(ph * 0.9) * 0.35 * (0.3 + speed01)
 		_chain.rotation.z = cos(ph * 0.7) * 0.25 * (0.3 + speed01)
+		# 炉心の脈動 (呼吸する熱)
+		if _core_mat:
+			_core_mat.emission_energy_multiplier = 5.0 + 2.5 * sin(anim_time * 2.6)
 
 
 # ================================================================= 2. ネオンリッパー
@@ -257,12 +271,21 @@ class NeonRipper extends MonsterBase:
 		part(_body, MatLib.sphere(0.34, Vector3(1, 0.8, 1)), m, Vector3(0, 0.12, 0.55), Vector3.ZERO, "ChestPlate")
 		part(_body, MatLib.sphere(0.3, Vector3(1, 0.7, 1)), carbon, Vector3(0, -0.18, 0.1), Vector3.ZERO, "BellyPlate")
 		part(_body, MatLib.box(Vector3(0.42, 0.12, 0.5)), m, Vector3(0, 0.28, -0.5), Vector3(8, 0, 0), "HipPlate")
-		# 背ビレ列 (5枚)
+		# 背ビレ列 (5枚) + 背骨のバイオルミネセンス点列
 		for i in 5:
 			var s := 0.3 - absf(i - 2.0) * 0.055
 			var fin := part(_body, MatLib.box(Vector3(0.03, s, s * 1.3)), m,
 					Vector3(0, 0.36, 0.5 - i * 0.32), Vector3(-15, 0, 0), "Fin%d" % i)
 			_fins.append(fin)
+		for i in 6:
+			part(_body, MatLib.sphere(0.035), tube,
+					Vector3(0, 0.34, 0.62 - i * 0.28), Vector3.ZERO, "GlowDot%d" % i)
+		# 尻のスラスター (疾走の推進器)
+		for side_t in [-1.0, 1.0]:
+			part(_body, MatLib.cone(0.07, 0.16, 0.05), MatLib.metal(Color(0.35, 0.37, 0.4), 0.4),
+					Vector3(side_t * 0.2, 0.18, -0.85), Vector3(70, 0, 0), "ThrusterHousing")
+			part(_body, MatLib.sphere(0.05), tube,
+					Vector3(side_t * 0.2, 0.14, -0.92), Vector3.ZERO, "ThrusterGlow")
 		# フランクのネオン管 (左右各2本)
 		for side in [-1.0, 1.0]:
 			part(_body, MatLib.box(Vector3(0.03, 0.03, 1.4)), tube,
@@ -275,6 +298,9 @@ class NeonRipper extends MonsterBase:
 		part(_neck1, MatLib.capsule(0.16, 0.5), m, Vector3(0, 0.12, 0.12), Vector3(38, 0, 0), "Neck1")
 		_neck2 = joint(_neck1, "NeckJ2", Vector3(0, 0.26, 0.26))
 		part(_neck2, MatLib.capsule(0.13, 0.4), m, Vector3(0, 0.1, 0.1), Vector3(30, 0, 0), "Neck2")
+		for side_f in [-1.0, 1.0]:
+			part(_neck2, MatLib.box(Vector3(0.02, 0.16, 0.22)), m,
+					Vector3(side_f * 0.12, 0.12, 0.02), Vector3(-20, side_f * -30.0, side_f * 20.0), "NeckFrill")
 		var head := joint(_neck2, "HeadJ", Vector3(0, 0.22, 0.24))
 		part(head, MatLib.box(Vector3(0.24, 0.2, 0.42)), m, Vector3(0, 0.02, 0.12), Vector3.ZERO, "Skull")
 		part(head, MatLib.box(Vector3(0.17, 0.14, 0.34)), m, Vector3(0, 0.0, 0.42), Vector3.ZERO, "Snout")
@@ -441,6 +467,16 @@ class Genbu extends MonsterBase:
 			var mp := part(base, MatLib.sphere(0.4, Vector3(1, 0.25, 1)), moss,
 					Vector3(cos(a) * 1.2, 0.75 + sin(a * 2.0) * 0.25, sin(a) * 1.2), Vector3.ZERO, "Moss")
 			mp.scale = Vector3(1.0, 0.5, 0.8)
+		# 縁から垂れる苔蔓 + 甲羅のルーン刻印板
+		for i in 3:
+			var av := TAU * i / 3.0 + 0.4
+			part(base, MatLib.cone(0.06, 0.7, 0.01), moss,
+					Vector3(cos(av) * 1.85, -0.4, sin(av) * 1.85), Vector3(180, 0, 0), "Vine")
+		for i in 4:
+			var ar := TAU * i / 4.0 + 0.9
+			var glyph := part(base, MatLib.box(Vector3(0.28, 0.2, 0.04)), rune,
+					Vector3(cos(ar) * 1.6, 0.55, sin(ar) * 1.6), Vector3.ZERO, "Glyph")
+			glyph.rotation.y = atan2(cos(ar), sin(ar))  # 刻印面を外向きに
 		part(base, MatLib.sphere(1.35, Vector3(1, 0.55, 1)), dark, Vector3(0, -0.55, 0), Vector3.ZERO, "Belly")
 
 		# 首2節 + 頭 (可動顎 + 嘴 + 角 + 頬ヒゲ石)
@@ -553,10 +589,20 @@ class Scrambler extends MonsterBase:
 			var a := TAU * k / 3.0
 			part(_orb_pivot, MatLib.sphere(0.09), MatLib.emissive(Color(1.0, 0.5, 0.8), 6.0),
 					Vector3(cos(a) * 1.5, sin(a * 2.0) * 0.2, sin(a) * 1.5), Vector3.ZERO, "Orb%d" % k)
-		# 上部アンテナフィン + 膜スカート
+		# 上部アンテナフィン + 天冠ヘイロー + 殻フィン4枚 + 膜スカート
 		part(center, MatLib.cone(0.06, 0.6, 0.01), chrome, Vector3(0, 1.25, 0), Vector3.ZERO, "Antenna")
 		part(center, MatLib.sphere(0.05), MatLib.emissive(Color(1.0, 0.3, 0.6), 8.0),
 				Vector3(0, 1.55, 0), Vector3.ZERO, "AntennaTip")
+		var halo := TorusMesh.new()
+		halo.inner_radius = 0.32
+		halo.outer_radius = 0.38
+		part(center, halo, MatLib.emissive(Color(0.6, 0.85, 1.0), 3.5),
+				Vector3(0, 1.42, 0), Vector3.ZERO, "Halo")
+		for i in 4:
+			var af := TAU * i / 4.0 + 0.5
+			part(center, MatLib.box(Vector3(0.03, 0.5, 0.28)), shell,
+					Vector3(cos(af) * 0.82, 0.55, sin(af) * 0.82),
+					Vector3(0, rad_to_deg(-af) + 90.0, 20), "ShellFin%d" % i)
 		_skirt = part(center, MatLib.cone(0.95, 0.7, 0.55), shell, Vector3(0, -0.75, 0), Vector3.ZERO, "Skirt")
 
 		# 触手8本 × 4節 + 先端クロー
@@ -720,11 +766,21 @@ class Toshikui extends MonsterBase:
 			t_off = Vector3(0, -0.4, -length * 0.85)
 
 		# 腕: 肩パウルドロン2段 + 2関節 + 3本爪
+		# 肩の排煙塔 (稼働する火の粉と連動)
+		for side_s in [-1.0, 1.0]:
+			part(_torso, MatLib.cone(0.5, 2.4, 0.42), plate,
+					Vector3(side_s * 2.4, 8.6, -1.2), Vector3(side_s * -8.0, 0, side_s * 12.0), "Stack")
+			part(_torso, MatLib.sphere(0.4, Vector3(1, 0.4, 1)), spine_mat,
+					Vector3(side_s * 2.65, 9.8, -1.45), Vector3.ZERO, "StackGlow")
 		for side in [-1.0, 1.0]:
 			var aj := joint(_torso, "ArmJ", Vector3(side * 3.6, 6.4, 0.5))
 			part(aj, MatLib.sphere(1.3, Vector3(1, 0.8, 1)), plate, Vector3(side * 0.2, 0.5, 0), Vector3.ZERO, "Pauldron")
 			part(aj, MatLib.box(Vector3(1.8, 0.5, 2.2)), plate, Vector3(side * 0.3, 1.1, 0), Vector3(0, 0, side * -12.0), "PauldronTop")
 			part(aj, MatLib.capsule(1.0, 3.6), m, Vector3(side * 0.3, -1.8, 0), Vector3(0, 0, side * -8.0), "ArmU")
+			for sk in 3:
+				part(aj, MatLib.cone(0.18, 0.8), bone,
+						Vector3(side * (0.9 + sk * 0.1), -0.8 - sk * 0.9, -0.3),
+						Vector3(0, 0, side * -70.0), "ArmSpike")
 			var ej := joint(aj, "ElbowJ", Vector3(side * 0.55, -3.6, 0))
 			part(ej, MatLib.capsule(0.8, 3.2), m, Vector3(0, -1.5, 0.3), Vector3(10, 0, 0), "ArmL")
 			part(ej, MatLib.sphere(1.05), m, Vector3(0, -3.2, 0.6), Vector3.ZERO, "Hand")

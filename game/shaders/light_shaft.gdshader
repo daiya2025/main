@@ -20,7 +20,10 @@ void fragment() {
 	// 縁で柔らかく (視線と法線が直交する縁ほど薄く)
 	vec3 view_dir = normalize(CAMERA_POSITION_WORLD - wpos);
 	float edge = pow(abs(dot(view_dir, normalize(wnormal))), 1.4);
-	float a = vfade * edge * intensity;
+	// カメラが近い時はフェードアウト (通過時のホワイトアウトで被写体が消えるのを防ぐ)
+	float cam_d = length(CAMERA_POSITION_WORLD - wpos);
+	float near_fade = smoothstep(2.5, 8.0, cam_d);
+	float a = vfade * edge * intensity * near_fade;
 	ALBEDO = color * a;
 	ALPHA = clamp(a, 0.0, 1.0);
 }

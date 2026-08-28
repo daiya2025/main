@@ -237,6 +237,11 @@ func _spawn_building(rng: RandomNumberGenerator, base_pos: Vector3,
 		_box_part(b, Vector3(rng.randf_range(1.5, 3.5), rng.randf_range(1.0, 2.0), rng.randf_range(1.5, 3.0)),
 				Vector3(rng.randf_range(-0.3, 0.3) * top_w, roof_y + 0.8, rng.randf_range(-0.3, 0.3) * top_d),
 				metal)
+	for _p in 2:  # 屋上配管 (ダクト)
+		var pipe := MatLib.mesh_node(MatLib.cone(0.09, rng.randf_range(1.2, 2.4), 0.09), metal,
+				Vector3(rng.randf_range(-0.35, 0.35) * top_w, roof_y + 0.7,
+						rng.randf_range(-0.35, 0.35) * top_d))
+		b.add_child(pipe)
 	if rng.randf() < 0.5:  # ペントハウス (階段室)
 		_box_part(b, Vector3(top_w * 0.3, 3.0, top_d * 0.3),
 				Vector3(top_w * 0.25, roof_y + 1.5, -top_d * 0.2), _facade_material)

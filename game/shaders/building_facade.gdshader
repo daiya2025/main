@@ -43,10 +43,14 @@ void fragment() {
 	// --- ビル識別ハッシュ (粗いワールドセル) と様式 ---
 	vec2 bcell = floor(wpos.xz / 18.0);
 	float bvar = hash12(bcell);
-	int style = int(floor(fract(bvar * 3.7) * 3.0)); // 0:パンチ窓 1:カーテンウォール 2:リボン窓
+	int style = int(floor(fract(bvar * 3.7) * 4.0)); // 0:パンチ窓 1:カーテンウォール 2:リボン窓 3:住宅(バルコニー)
 	vec3 tint = mix(vec3(0.90), vec3(1.08), bvar) * base_color;
 	tint = mix(tint, tint * vec3(0.80, 0.85, 0.96), step(0.75, fract(bvar * 5.3)));
 	tint = mix(tint, tint * vec3(1.05, 1.0, 0.9), step(0.85, fract(bvar * 9.1)));
+	tint = mix(tint, tint * vec3(1.14, 1.02, 0.84), step(0.62, fract(bvar * 4.7)) * 0.7); // 温色系
+	if (style == 3) { // 住宅棟はレンガ/ベージュ系に寄せる
+		tint = mix(tint, vec3(0.52, 0.40, 0.34), 0.55 * step(0.45, fract(bvar * 2.9)));
+	}
 
 	if (an.y > 0.6) {
 		// --- 屋上: 防水シート + 汚れ ---
@@ -56,11 +60,13 @@ void fragment() {
 		SPECULAR = 0.15;
 	} else {
 		vec2 plane = (an.x > an.z) ? vec2(wpos.z, wpos.y) : vec2(wpos.x, wpos.y);
-		// 様式ごとの窓ピッチ
+		// 様式ごとの窓ピッチ (+ ビルごとの寸法バリエーション)
 		vec2 pitch = vec2(2.6, 3.4);
 		vec2 win_half = vec2(0.33, 0.27);       // 窓の半サイズ (セル比)
 		if (style == 1) { pitch = vec2(1.6, 3.4); win_half = vec2(0.46, 0.42); }
 		if (style == 2) { pitch = vec2(5.0, 3.4); win_half = vec2(0.44, 0.24); }
+		if (style == 3) { pitch = vec2(3.4, 2.9); win_half = vec2(0.36, 0.30); }
+		pitch *= 0.88 + 0.3 * fract(bvar * 11.3);
 
 		vec2 cellf = plane / pitch;
 		vec2 cell = floor(cellf);
@@ -96,6 +102,17 @@ void fragment() {
 		}
 		// 窓下枠の落ち影
 		float sill = step(abs(f.y - (0.47 - win_half.y) + 0.02), 0.035) * step(d.x, win_half.x) * (1.0 - inside);
+		// 住宅様式: 各階下部のバルコニー帯 (奥まった影 + 手すりの縦桟)
+		float balc = 0.0;
+		float rail = 0.0;
+		if (style == 3) {
+			balc = step(f.y, 0.26);
+			rail = step(fract(plane.x / 0.42), 0.12) * step(0.05, f.y);
+		}
+		// ブラインド: 点灯窓の一部は上部が遮られる (生活感)
+		float has_blind = step(0.55, fract(rnd * 9.71));
+		float blind_frac = 0.25 + 0.45 * fract(rnd * 17.3);
+		float blind_cut = mix(1.0, mix(0.12, 1.0, step(win_v, 1.0 - blind_frac)), has_blind);
 
 		// 窓下の雨だれ汚れ (縦ノイズ、窓の下ほど濃い)
 		float streak = vnoise(vec2(plane.x * 2.2, plane.y * 0.15)) * vnoise(plane * vec2(3.1, 0.3));
@@ -116,8 +133,14 @@ void fragment() {
 		float metal = inside * ((style == 1) ? 0.6 : 0.35) * (1.0 - ac);
 		metal = mix(metal, 0.85, frame);
 
+		// バルコニー帯の合成 (住宅様式)
+		albedo = mix(albedo, tint * 0.30, balc * (1.0 - rail));
+		albedo = mix(albedo, tint * 0.72, balc * rail);
+		rough = mix(rough, 0.85, balc);
+		metal *= (1.0 - balc);
+
 		vec3 emit = wcol * window_emission * inside * (1.0 - frame) * (1.0 - ac)
-				* lit * bright * flicker * interior;
+				* lit * bright * flicker * interior * blind_cut * (1.0 - balc * 0.85);
 
 		// --- 店舗階 (地上 0〜4.2m): 大開口ガラス + 店内光 + 看板色 ---
 		float sf_zone = step(wpos.y, 4.2) * night_factor;
@@ -132,6 +155,12 @@ void fragment() {
 			rough = mix(rough, 0.1, sf_open);
 			emit = mix(emit, sf_col * storefront_emission * (0.7 + 0.3 * sin(TIME * 1.3 + sf_rnd * 20.0)),
 					sf_open * sf_on);
+			// 日除けオーニング (2.9〜3.2m, 店の色の布地)
+			float awning = step(2.9, wpos.y) * step(wpos.y, 3.2) * sf_on;
+			float awn_stripe = step(0.5, fract(plane.x / 0.6));
+			albedo = mix(albedo, mix(sf_col * 0.5, vec3(0.9), awn_stripe * 0.55), awning * 0.95);
+			rough = mix(rough, 0.95, awning);
+			emit *= (1.0 - awning);
 			// 看板帯 (3.2〜3.9m)
 			float sign_band = step(3.25, wpos.y) * step(wpos.y, 3.9) * sf_on;
 			emit = mix(emit, sf_col * storefront_emission * 1.4, sign_band * 0.8);

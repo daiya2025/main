@@ -53,6 +53,25 @@ func setup(p_world: Node3D, p_player: Player, p_monsters: Dictionary,
 	for m in monsters.values():
 		m.demo_mode = true
 
+	# フォローライト: 主人公が影の中でも常に読めるシネマ用フィル (映画の照明部)
+	var fill := OmniLight3D.new()
+	fill.name = "HeroFill"
+	fill.light_color = Color(0.95, 0.93, 1.0)
+	fill.light_energy = 1.1
+	fill.omni_range = 7.0
+	fill.omni_attenuation = 1.2
+	fill.position = Vector3(1.2, 2.4, 1.2)
+	fill.shadow_enabled = false
+	player.add_child(fill)
+	var rim_fill := OmniLight3D.new()
+	rim_fill.name = "HeroRim"
+	rim_fill.light_color = Color(0.5, 0.7, 1.0)
+	rim_fill.light_energy = 0.9
+	rim_fill.omni_range = 6.0
+	rim_fill.position = Vector3(-1.0, 2.0, -1.4)
+	rim_fill.shadow_enabled = false
+	player.add_child(rim_fill)
+
 	_build_overlay()
 	_build_shots()
 	_build_events()
@@ -87,12 +106,32 @@ func _build_shots() -> void:
 	# 4b. 到着を正面ローアングルで迎える (減速→停止→構え)
 	_shots.append(_mv(23.2, 26.0, Vector3(0.5, 1.1, 3.5), Vector3(2.0, 1.4, 4.2),
 			Vector3.ZERO, Vector3.ZERO, 46, 42, "player", Vector3(0, 1.2, 0)))
-	# 5.「初撃破」リッパー vs 主人公: 両者が収まるサイドの二人ショット
-	_shots.append(_mv(26.0, 33.5, Vector3(-3.5, 1.3, 3.0), Vector3(-1.0, 1.9, 6.5),
-			Vector3(4.4, 1.2, 4.6), Vector3(4.4, 1.2, 4.4), 42, 40))
-	# 6.「カゲオニ戦」鬼と主人公の対峙を横から (振り下ろし〜反撃)
-	_shots.append(_mv(33.5, 41.5, Vector3(2.5, 1.6, 10.5), Vector3(0.5, 2.6, 8.5),
-			Vector3(-2.8, 1.9, 3.2), Vector3(-3.0, 1.7, 3.6), 46, 44))
+	# --- リッパー戦 (26〜33.5s): カット割りで「何が起きているか」を明確に ---
+	# 5a. 確立ショット: 対峙する二人 (ワイド)
+	_shots.append(_mv(26.0, 27.9, Vector3(-3.5, 1.3, 3.0), Vector3(-2.4, 1.5, 4.2),
+			Vector3(4.4, 1.2, 4.6), Vector3(4.4, 1.2, 4.5), 42, 41))
+	# 5b. 肩越しショット: 主人公の背中越しにリッパーへ斬撃 (28.2s の一撃)
+	_shots.append(_mv(27.9, 29.7, Vector3(5.9, 1.8, 8.4), Vector3(5.3, 1.6, 7.5),
+			Vector3.ZERO, Vector3.ZERO, 52, 50, "neon_ripper", Vector3(0, 1.0, 0)))
+	# 5c. 切り返し: リッパー側のクローズ — 30.6s のトドメと消滅
+	_shots.append(_mv(29.7, 31.8, Vector3(1.6, 1.0, 1.8), Vector3(2.7, 1.3, 2.6),
+			Vector3.ZERO, Vector3.ZERO, 48, 46, "neon_ripper", Vector3(0, 0.9, 0)))
+	# 5d. 余韻: 消滅の光を見送る主人公
+	_shots.append(_mv(31.8, 33.5, Vector3(0.2, 1.9, 0.8), Vector3(-1.2, 2.0, 2.0),
+			Vector3.ZERO, Vector3.ZERO, 46, 44, "player", Vector3(0, 1.25, 0)))
+	# --- カゲオニ戦 (33.5〜41.5s) ---
+	# 6a. 確立: 迫る鬼と構える主人公 (ワイド低め)
+	_shots.append(_mv(33.5, 35.5, Vector3(2.5, 1.6, 10.5), Vector3(1.6, 1.9, 9.2),
+			Vector3(-2.8, 1.9, 3.2), Vector3(-2.6, 1.9, 3.3), 46, 45))
+	# 6b. 鬼の振り下ろしを主人公の肩越しに (35.0〜37.2 の demo_attack)
+	_shots.append(_mv(35.5, 37.4, Vector3(-2.4, 1.7, 6.2), Vector3(-3.3, 1.6, 5.7),
+			Vector3.ZERO, Vector3.ZERO, 52, 50, "kage_oni", Vector3(0, 2.5, 0)))
+	# 6c. サイドの二人ショット: 反撃2連 (37.7 / 38.7)
+	_shots.append(_mv(37.4, 39.5, Vector3(-6.6, 1.2, 0.8), Vector3(-5.7, 1.5, 1.7),
+			Vector3(-3.0, 1.7, 3.4), Vector3(-3.0, 1.6, 3.5), 48, 47))
+	# 6d. 決めの一撃 (39.9) をローアングルで — 鬼を追尾して仰け反りを見せる
+	_shots.append(_mv(39.5, 41.5, Vector3(-1.4, 1.0, 7.0), Vector3(-0.6, 1.4, 6.2),
+			Vector3.ZERO, Vector3.ZERO, 52, 50, "kage_oni", Vector3(0, 2.2, 0)))
 	# 7.「増援」カメラ上昇 — ゲンブ進撃 / スクランブラー滑空
 	_shots.append(_mv(41.5, 46.0, Vector3(4, 1.8, 12), Vector3(2, 13, 22),
 			Vector3(-10, 2, 8), Vector3(-14, 5, 10), 50, 52))
@@ -186,7 +225,7 @@ func _build_events() -> void:
 			player.command_face_target(ripper)          # 常に敵へ正対
 		player.combat_mode = true                       # 戦闘構え
 		_dof(true, 12.0))
-	for atk in [[27.3, 45.0], [28.9, 45.0], [30.4, 400.0]]:
+	for atk in [[27.0, 45.0], [28.2, 45.0], [30.6, 400.0]]:
 		_ev(atk[0], func() -> void:
 			player.command_attack()
 			var ripper := _monster("neon_ripper")
@@ -213,7 +252,7 @@ func _build_events() -> void:
 			kage.demo_attack(2.2))
 	_ev(35.6, func() -> void:
 		player.command_move_to(Vector3(-4.5, 0.5, 4.5), true))  # 間合いを保つ回避
-	for atk2 in [36.9, 38.3, 39.7]:
+	for atk2 in [37.7, 38.7, 39.9]:
 		_ev(atk2, func() -> void:
 			player.command_attack()
 			var kage := _monster("kage_oni")
@@ -224,11 +263,11 @@ func _build_events() -> void:
 			_cam_shake = maxf(_cam_shake, 0.55))
 	_ev(35.2, func() -> void:
 		_cam_shake = maxf(_cam_shake, 0.45))  # 鬼の振り下ろし
-	_ev(38.6, func() -> void:
+	_ev(40.3, func() -> void:
 		var kage := _monster("kage_oni")
 		if kage:
-			kage.demo_attack(1.8))
-	_ev(38.8, func() -> void:
+			kage.demo_attack(1.1))
+	_ev(40.5, func() -> void:
 		_cam_shake = maxf(_cam_shake, 0.45))
 
 	# --- 41.5s 増援 (ゲンブ進撃 / スクランブラー滑空) ---

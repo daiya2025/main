@@ -261,7 +261,8 @@ func hit(dmg: float, from_dir: Vector3 = Vector3.ZERO) -> bool:
 	var hit_pos := global_position + Vector3(0, body_height * 0.45, 0) - from_dir * body_radius
 	_impact_spark(hit_pos)
 	if from_dir.length() > 0.1:
-		velocity += from_dir.normalized() * clampf(60.0 / maxf(body_radius, 0.5), 2.0, 7.0)
+		# 体格の2乗に反比例: 小型は吹き飛び、大型は僅かに揺らぐ
+		velocity += from_dir.normalized() * clampf(5.0 / maxf(body_radius * body_radius, 0.25), 1.0, 7.0)
 	_recoil = 1.0
 	if not demo_mode and state == State.IDLE:
 		state = State.CHASE

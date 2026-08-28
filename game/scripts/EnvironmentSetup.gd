@@ -9,7 +9,7 @@ const PRESETS := {
 	"night": {
 		"sun_energy": 0.85, "sun_color": Color(0.66, 0.75, 1.0),
 		"sun_dir": Vector3(-0.35, -0.5, -0.4),
-		"bg_energy": 1.35, "exposure": 1.6,
+		"bg_energy": 1.45, "exposure": 1.6,
 		"fog_density": 0.016, "fog_albedo": Color(0.48, 0.55, 0.72),
 		"night_factor": 1.0, "rain": true,
 		"sky_top": Color(0.05, 0.07, 0.15), "sky_horizon": Color(0.38, 0.25, 0.40),
