@@ -80,9 +80,13 @@ func _build_shots() -> void:
 	# 3.「出現」カゲオニ降臨 → こちらへ歩いてくる / 背後をリッパーが疾走
 	_shots.append(_mv(13.0, 19.5, Vector3(-4, 1.4, 6), Vector3(-10, 1.9, 0),
 			Vector3.ZERO, Vector3.ZERO, 46, 44, "kage_oni", Vector3(0, 2.5, 0)))
-	# 4.「参戦」プレイヤーが雨の中を疾走してくる (サイドから見送るトラッキング)
-	_shots.append(_mv(19.5, 26.0, Vector3(17, 2.2, 19), Vector3(9.5, 1.7, 10),
-			Vector3.ZERO, Vector3.ZERO, 44, 40, "player", Vector3(0, 1.15, 0)))
+	# 4a.「参戦」走行ラインの真横 8m を並走するサイドトラッキング
+	#     (走路上にカメラを置くと通過時に180°スイングして「ワープ」に見える)
+	_shots.append(_mv(19.5, 23.2, Vector3(33.9, 1.9, 28.5), Vector3(17.3, 1.9, 8.0),
+			Vector3.ZERO, Vector3.ZERO, 42, 42, "player", Vector3(0, 1.1, 0)))
+	# 4b. 到着を正面ローアングルで迎える (減速→停止→構え)
+	_shots.append(_mv(23.2, 26.0, Vector3(0.5, 1.1, 3.5), Vector3(2.0, 1.4, 4.2),
+			Vector3.ZERO, Vector3.ZERO, 46, 42, "player", Vector3(0, 1.2, 0)))
 	# 5.「初撃破」リッパー vs 主人公: 両者が収まるサイドの二人ショット
 	_shots.append(_mv(26.0, 33.5, Vector3(-3.5, 1.3, 3.0), Vector3(-1.0, 1.9, 6.5),
 			Vector3(4.4, 1.2, 4.6), Vector3(4.4, 1.2, 4.4), 42, 40))
@@ -200,6 +204,8 @@ func _build_events() -> void:
 			player.command_face_target(kage)
 			AudioKit.sfx(self, "roar_kage", kage.global_position + Vector3(0, 3, 0), -1.0, 0.92)
 		player.command_move_to(Vector3(-2, 0.5, 5))
+		# 黒曜石の鬼を読ませる戦闘照明 (暖色キー + 寒色リム)
+		_hero_lights(Vector3(-1.8, 2.2, 3.2))
 		_dof(true, 16.0))
 	_ev(35.0, func() -> void:
 		var kage := _monster("kage_oni")

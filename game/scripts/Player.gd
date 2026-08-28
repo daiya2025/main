@@ -223,7 +223,8 @@ func _animate_rigged(delta: float, speed: float) -> void:
 		target = _anim_map.get("jump_air", "")
 	elif speed > WALK_SPEED * 1.25:
 		target = _anim_map.get("run", "")
-		cadence = clampf(speed / SPRINT_SPEED, 0.85, 1.25)
+		# 歩幅と地面速度を合わせて足滑り(ワープ感)を防ぐ
+		cadence = clampf(speed / 5.0, 0.9, 1.7)
 	elif speed > 0.5:
 		target = _anim_map.get("walk", "")
 		cadence = clampf(speed / WALK_SPEED, 0.7, 1.4)

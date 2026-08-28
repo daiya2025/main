@@ -227,6 +227,8 @@ func _do_wander(delta: float) -> Vector3:
 	_wander_timer -= delta
 	if _demo_has_target:
 		_wander_target = _demo_target
+	elif demo_mode:
+		return Vector3.ZERO  # デモ中は指示地点で待機 (勝手に初期地点へ戻らない)
 	elif _wander_timer <= 0.0:
 		_wander_timer = randf_range(3.0, 7.0)
 		var ang := randf() * TAU
@@ -324,6 +326,7 @@ func _die() -> void:
 func demo_goto(pos: Vector3) -> void:
 	_demo_target = pos
 	_demo_has_target = true
+	_spawn_pos = pos  # 以後の基準点も指示地点に
 	state = State.IDLE
 
 

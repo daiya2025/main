@@ -38,17 +38,28 @@ void fragment() {
 	if (n < dissolve - 0.05) {
 		discard;
 	}
-	// 鱗状の凹凸
+	// 鱗状の凹凸 (大) + 皮膚の毛穴スケール (小)
 	float scale_pat = vnoise(wpos * vec3(3.0, 6.0, 3.0));
+	float pores = vnoise(wpos * vec3(11.0, 18.0, 11.0));
 	float crevice = smoothstep(0.35, 0.55, scale_pat);
 
 	// 皮下発光: 亀裂部分から漏れる
 	float veins = smoothstep(0.12, 0.02, abs(vnoise(wpos * 1.3 + 5.0) - 0.5) * 2.0);
 	float breath = 0.65 + 0.35 * sin(TIME * 0.9 + wpos.y * 0.15);
 
-	ALBEDO = skin_color * (0.6 + 0.8 * scale_pat);
-	ROUGHNESS = mix(0.9, 0.55, crevice);
-	SPECULAR = 0.4;
-	NORMAL = normalize(NORMAL + vec3(scale_pat - 0.5) * 0.4);
-	EMISSION = under_glow * veins * breath * glow_strength + under_glow * hit_flash * 1.2;
+	// 鱗の間は血色の下皮、鱗面は角質のグレー
+	vec3 base = skin_color * (0.6 + 0.8 * scale_pat) * (0.85 + 0.3 * pores);
+	base = mix(base * vec3(1.4, 0.75, 0.7), base, crevice);
+	ALBEDO = base;
+
+	// 雨濡れの皮膚 + 輪郭リム (60m 級のシルエットを読ませる)
+	float up = clamp(wnormal.y, 0.0, 1.0);
+	ROUGHNESS = mix(mix(0.92, 0.5, crevice), 0.3, up * 0.55);
+	SPECULAR = 0.4 + up * 0.4;
+	NORMAL = normalize(NORMAL + vec3(scale_pat - 0.5) * 0.4 + vec3(pores - 0.5, 0.5 - pores, 0.0) * 0.2);
+	vec3 view_dir = normalize(CAMERA_POSITION_WORLD - wpos);
+	float rim = pow(1.0 - clamp(dot(view_dir, normalize(wnormal)), 0.0, 1.0), 3.0);
+	EMISSION = under_glow * veins * breath * glow_strength
+			+ mix(vec3(0.4, 0.5, 0.8), under_glow, 0.5) * rim * 0.5
+			+ under_glow * hit_flash * 1.2;
 }

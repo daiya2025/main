@@ -48,12 +48,18 @@ void fragment() {
 	float seam = smoothstep(0.42, 0.485, max(gf.x, gf.y));
 	float panel_var = hash13(vec3(floor(g), 1.0));
 
+	// 甲殻の微細な擦り傷 (体軸方向に伸びた異方性ノイズ) + 雨滴のきらめき
+	float scratch = hash13(vec3(floor(wpos.y * 90.0), floor((wpos.x + wpos.z) * 7.0), 3.0));
+	float up = clamp(wnormal.y, 0.0, 1.0);
+	float droplet = step(0.985, hash13(floor(wpos * 55.0))) * up;
+
 	ALBEDO = (base_color + iri * fres * 0.35) * (1.0 - seam * 0.5) * (0.9 + panel_var * 0.2);
 	METALLIC = 0.85;
-	ROUGHNESS = 0.18 + seam * 0.35 + panel_var * 0.08;
-	SPECULAR = 0.7;
+	ROUGHNESS = clamp(0.14 + seam * 0.35 + panel_var * 0.08 + scratch * 0.12 - up * 0.06, 0.05, 1.0);
+	SPECULAR = 0.7 + up * 0.25;
 	EMISSION = stripe_color * stripe * stripe_emission * (1.0 - seam * 0.7)
 			+ stripe_color * seam * 0.25
-			+ iri * fres * 1.2
+			+ iri * fres * 1.5
+			+ vec3(0.8, 0.95, 1.0) * droplet * 0.9
 			+ stripe_color * hit_flash * 1.4;
 }
