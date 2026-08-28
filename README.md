@@ -20,7 +20,7 @@ Godot 4.4 (Forward+) 製の 3D アクション + 60秒シネマティックデ�
 
 | | |
 |---|---|
-| ![裂け目誕生](docs/screenshots/rift_birth.png) | ![カゲオニ降臨](docs/screenshots/kage_spawn.png) |
+| ![裂け目誕生](docs/screenshots/rift_birth.png) | ![参戦](docs/screenshots/hero_run.png) |
 | ![初撃破](docs/screenshots/first_kill.png) | ![増援](docs/screenshots/reinforcements.png) |
 | ![トシクイ](docs/screenshots/toshikui.png) | ![タイトル](docs/screenshots/title_hero.png) |
 
