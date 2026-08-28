@@ -38,12 +38,13 @@ static func _build_gltf(path: String, kind: String) -> Dictionary:
 		inst.queue_free()
 		return {}
 
-	# glTF は -Z が正面。ゲーム側の「+Z 前」規約に合わせて180°回すラッパーを挟む
+	# glTF 規約: モデル正面は +Z。ゲームの「+Z 前」規約と一致するため回転なし
+	# (素のglbを±Z両側からレンダリングして検証済み。-Z正面のモデルを使う場合はここをPIに)
 	var root := Node3D.new()
 	root.name = "CharacterRig"
 	var facing := Node3D.new()
 	facing.name = "Facing"
-	facing.rotation.y = PI
+	facing.rotation.y = 0.0
 	facing.add_child(inst)
 	root.add_child(facing)
 

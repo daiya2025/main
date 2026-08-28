@@ -29,6 +29,7 @@ var _subtitle: Label
 var _chapter: Label
 var _white := 0.0
 var _last_look := Vector3.ZERO
+var _cam_shake := 0.0
 var _finished := false
 
 
@@ -140,6 +141,7 @@ func _build_events() -> void:
 	# --- 8s 裂け目誕生 (白閃光 + 稲妻状に裂ける + braam) ---
 	_ev(8.0, func() -> void:
 		_white = 0.9
+		_cam_shake = 0.9
 		props.rift_birth(2.5)
 		AudioKit.sfx(self, "rift", Vector3.INF, -1.0))
 	_ev(8.1, func() -> void:
@@ -185,7 +187,10 @@ func _build_events() -> void:
 			player.command_attack()
 			var ripper := _monster("neon_ripper")
 			if ripper:
-				ripper.hit(atk[1]))
+				var dir := (ripper.global_position - player.global_position)
+				dir.y = 0
+				ripper.hit(atk[1], dir.normalized())
+			_cam_shake = maxf(_cam_shake, 0.55))
 
 	# --- 33.5〜41.5s カゲオニ戦: 密着距離で対峙・回避・反撃 ---
 	_ev(33.6, func() -> void:
@@ -207,11 +212,18 @@ func _build_events() -> void:
 			player.command_attack()
 			var kage := _monster("kage_oni")
 			if kage:
-				kage.hit(28.0))
+				var dir := (kage.global_position - player.global_position)
+				dir.y = 0
+				kage.hit(28.0, dir.normalized())
+			_cam_shake = maxf(_cam_shake, 0.55))
+	_ev(35.2, func() -> void:
+		_cam_shake = maxf(_cam_shake, 0.45))  # 鬼の振り下ろし
 	_ev(38.6, func() -> void:
 		var kage := _monster("kage_oni")
 		if kage:
 			kage.demo_attack(1.8))
+	_ev(38.8, func() -> void:
+		_cam_shake = maxf(_cam_shake, 0.45))
 
 	# --- 41.5s 増援 (ゲンブ進撃 / スクランブラー滑空) ---
 	_ev(41.6, func() -> void:
@@ -334,7 +346,18 @@ func _process(delta: float) -> void:
 	while _next_event < _events.size() and _events[_next_event]["t"] <= t:
 		(_events[_next_event]["fn"] as Callable).call()
 		_next_event += 1
+	# 巨獣接近中は地響きの微振動
+	if t >= 46.0:
+		_cam_shake = maxf(_cam_shake, 0.09)
 	_update_camera()
+	# カメラシェイク (打撃・轟音の衝撃)
+	if _cam_shake > 0.004:
+		cam.h_offset = randf_range(-1, 1) * _cam_shake * 0.06
+		cam.v_offset = randf_range(-1, 1) * _cam_shake * 0.06
+		_cam_shake = maxf(_cam_shake - delta * 2.2, 0.0)
+	else:
+		cam.h_offset = 0.0
+		cam.v_offset = 0.0
 	_update_overlay(delta)
 	if t >= DURATION + 0.2:
 		_finished = true

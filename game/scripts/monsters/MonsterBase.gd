@@ -217,6 +217,10 @@ func _physics_process(delta: float) -> void:
 
 	var speed01 := clampf(Vector3(velocity.x, 0, velocity.z).length() / maxf(move_speed, 0.01), 0.0, 1.0)
 	_animate(delta, speed01)
+	# 被弾の仰け反り (視覚リコイル)
+	if _recoil > 0.0:
+		_recoil = maxf(_recoil - delta * 3.0, 0.0)
+		visual.rotation.x = -_recoil * 0.12
 
 
 func _do_wander(delta: float) -> Vector3:
@@ -243,7 +247,7 @@ func _get_player() -> Node3D:
 
 # ------------------------------------------------------------------ 戦闘
 
-func hit(dmg: float) -> bool:
+func hit(dmg: float, from_dir: Vector3 = Vector3.ZERO) -> bool:
 	if state == State.DEAD:
 		return false
 	hp -= dmg
@@ -251,12 +255,55 @@ func hit(dmg: float) -> bool:
 	set_param("hit_flash", 1.0)
 	AudioKit.sfx(self, "impact", global_position + Vector3(0, body_height * 0.5, 0),
 			-4.0, randf_range(0.9, 1.15))
+	# 打撃の可読性: 衝撃スパーク + ノックバック + 仰け反り
+	var hit_pos := global_position + Vector3(0, body_height * 0.45, 0) - from_dir * body_radius
+	_impact_spark(hit_pos)
+	if from_dir.length() > 0.1:
+		velocity += from_dir.normalized() * clampf(60.0 / maxf(body_radius, 0.5), 2.0, 7.0)
+	_recoil = 1.0
 	if not demo_mode and state == State.IDLE:
 		state = State.CHASE
 	if hp <= 0.0:
 		_die()
 		return true
 	return false
+
+
+var _recoil := 0.0
+
+
+## 白熱の衝撃スパーク (小さく膨張して消える)
+func _impact_spark(pos: Vector3) -> void:
+	var mi := MeshInstance3D.new()
+	mi.mesh = MatLib.sphere(0.5)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(1.0, 0.85, 0.5, 0.9)
+	mi.material_override = mat
+	var parent := get_parent()
+	if parent == null:
+		mi.queue_free()
+		return
+	parent.add_child(mi)
+	mi.global_position = pos
+	mi.scale = Vector3.ONE * 0.25
+	var l := OmniLight3D.new()
+	l.light_color = Color(1.0, 0.8, 0.4)
+	l.light_energy = 6.0
+	l.omni_range = 7.0
+	l.shadow_enabled = false
+	parent.add_child(l)
+	l.global_position = pos
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(mi, "scale", Vector3.ONE * randf_range(1.6, 2.2), 0.22).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mi, "transparency", 1.0, 0.22)
+	tw.tween_property(l, "light_energy", 0.0, 0.25)
+	tw.chain().tween_callback(func() -> void:
+		mi.queue_free()
+		l.queue_free())
 
 
 func _die() -> void:

@@ -49,6 +49,7 @@ static func setup(root: Node3D, preset_name: String) -> Dictionary:
 		var proc := ProceduralSkyMaterial.new()
 		proc.sky_top_color = p["sky_top"]
 		proc.sky_horizon_color = p["sky_horizon"]
+		proc.sky_curve = 0.09          # 地平線の光害グラデーションを低く濃く
 		proc.ground_bottom_color = Color(0.02, 0.02, 0.03)
 		proc.ground_horizon_color = p["sky_horizon"]
 		proc.sun_angle_max = 20.0

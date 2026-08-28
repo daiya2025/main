@@ -137,9 +137,9 @@ func _build_neon_billboards() -> void:
 		[Color(0.2, 1.0, 0.5), Color(0.1, 0.5, 1.0)],
 		[Color(0.7, 0.2, 1.0), Color(0.1, 0.9, 0.9)],
 	]
-	for i in 14:
-		var ang := TAU * i / 14.0 + rng.randf_range(-0.15, 0.15)
-		var radius := rng.randf_range(30.0, 55.0)
+	for i in 20:
+		var ang := TAU * i / 20.0 + rng.randf_range(-0.15, 0.15)
+		var radius := rng.randf_range(30.0, 62.0)
 		var w := rng.randf_range(3.0, 7.0)
 		var h := rng.randf_range(4.0, 10.0)
 		var y := rng.randf_range(6.0, 26.0)
@@ -196,6 +196,22 @@ func _build_streetlights() -> void:
 		l.position = lamp_pos + Vector3(0, -0.3, 0)
 		l.shadow_enabled = i % 3 == 0  # 影は間引いて品質と負荷のバランスを取る
 		add_child(l)
+		# 雨夜の光芒コーン (フェイクボリュームライト)
+		var shaft := CylinderMesh.new()
+		shaft.top_radius = 0.16
+		shaft.bottom_radius = 1.7
+		shaft.height = 5.2
+		shaft.radial_segments = 20
+		shaft.cap_top = false
+		shaft.cap_bottom = false
+		var shaft_mat := ShaderMaterial.new()
+		shaft_mat.shader = load("res://shaders/light_shaft.gdshader")
+		var smi := MeshInstance3D.new()
+		smi.mesh = shaft
+		smi.material_override = shaft_mat
+		smi.position = lamp_pos + Vector3(0, -2.75, 0)
+		smi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(smi)
 
 
 func _scatter_nature() -> void:

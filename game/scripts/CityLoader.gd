@@ -23,6 +23,30 @@ func build(p_night_factor: float) -> void:
 	_build_ground()
 	if not _load_plateau_city():
 		_build_procedural_city()
+	_build_far_skyline()
+
+
+## 遠景スカイライン: 地平線を埋める背景タワー群 (演出用・当たり判定なし)
+func _build_far_skyline() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 150
+	for i in 110:
+		var ang := rng.randf() * TAU
+		var dist := rng.randf_range(300.0, 800.0)
+		var w := rng.randf_range(28.0, 70.0)
+		var d := rng.randf_range(28.0, 70.0)
+		var closeness := clampf(1.0 - (dist - 300.0) / 500.0, 0.0, 1.0)
+		var h := rng.randf_range(40.0, 90.0) + closeness * rng.randf_range(30.0, 190.0) \
+				+ (120.0 if rng.randf() < 0.06 else 0.0)  # 時々超高層
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(w, h, d)
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.material_override = _facade_material
+		mi.position = Vector3(cos(ang) * dist, h * 0.5, sin(ang) * dist)
+		mi.rotation.y = rng.randf_range(0, TAU)
+		mi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+		add_child(mi)
 
 
 func _make_facade_material() -> ShaderMaterial:
@@ -227,9 +251,9 @@ func _spawn_building(rng: RandomNumberGenerator, base_pos: Vector3,
 		var beacon := MatLib.mesh_node(MatLib.sphere(0.28), MatLib.emissive(Color(1.0, 0.1, 0.08), 5.0),
 				Vector3(0, roof_y + mast_h + 0.2, 0))
 		b.add_child(beacon)
-	if closeness > 0.5 and rng.randf() < 0.35:  # 屋上ビルボード
+	if closeness > 0.35 and rng.randf() < 0.5:  # 屋上ビルボード
 		_rooftop_billboard(b, rng, top_w, top_d, roof_y)
-	if closeness > 0.4 and h > 25.0 and rng.randf() < 0.5:  # 壁面の縦看板
+	if closeness > 0.3 and h > 25.0 and rng.randf() < 0.7:  # 壁面の縦看板
 		_vertical_sign(b, rng, w, d, minf(h, 40.0))
 
 	# --- 当たり判定 (タワー + 基壇をまとめて1箱) ---

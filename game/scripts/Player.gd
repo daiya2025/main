@@ -148,19 +148,24 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= GRAVITY * delta
 	move_and_slide()
 
-	# キャラクターの向き: 対峙相手 > デモ指定向き > 進行方向
+	# キャラクターの向き: 対峙相手 > デモ指定向き > 進行方向 (フレームレート非依存の平滑化)
 	var planar := Vector3(velocity.x, 0, velocity.z)
+	var prev_yaw := _visual.rotation.y
 	if external_control and is_instance_valid(_face_target):
 		var to_t := _face_target.global_position - global_position
 		to_t.y = 0
 		if to_t.length() > 0.2:
-			_visual.rotation.y = lerp_angle(_visual.rotation.y, atan2(to_t.x, to_t.z), 9.0 * delta)
+			_visual.rotation.y = lerp_angle(prev_yaw, atan2(to_t.x, to_t.z), 1.0 - exp(-9.0 * delta))
 	elif external_control and _demo_face_dir.length() > 0.1 and planar.length() <= 0.5:
 		var face_yaw := atan2(_demo_face_dir.x, _demo_face_dir.z)
-		_visual.rotation.y = lerp_angle(_visual.rotation.y, face_yaw, 6.0 * delta)
+		_visual.rotation.y = lerp_angle(prev_yaw, face_yaw, 1.0 - exp(-6.0 * delta))
 	elif planar.length() > 0.5:
 		var yaw := atan2(planar.x, planar.z)
-		_visual.rotation.y = lerp_angle(_visual.rotation.y, yaw, 10.0 * delta)
+		_visual.rotation.y = lerp_angle(prev_yaw, yaw, 1.0 - exp(-10.0 * delta))
+	# 旋回バンク: ヨー角速度に応じて内側へ傾く (走りの精密感)
+	var yaw_rate := angle_difference(prev_yaw, _visual.rotation.y) / maxf(delta, 0.001)
+	var target_roll := clampf(-yaw_rate * 0.055, -0.22, 0.22) * clampf(planar.length() / WALK_SPEED, 0.0, 1.0)
+	_visual.rotation.z = lerpf(_visual.rotation.z, target_roll, 1.0 - exp(-8.0 * delta))
 
 	_animate(delta, planar.length())
 	_apply_camera_shake()
@@ -272,7 +277,7 @@ func _try_attack() -> void:
 		to_m.y = 0
 		if to_m.normalized().dot(fwd) < 0.25:
 			continue
-		var killed: bool = monster.call("hit", ATTACK_DAMAGE)
+		var killed: bool = monster.call("hit", ATTACK_DAMAGE, to_m.normalized())
 		_shake = 0.35
 		if killed:
 			kills += 1
@@ -281,7 +286,7 @@ func _try_attack() -> void:
 
 func _spawn_slash_vfx() -> void:
 	var quad := QuadMesh.new()
-	quad.size = Vector2(2.4, 1.1)
+	quad.size = Vector2(3.2, 1.5)
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -301,8 +306,9 @@ func _spawn_slash_vfx() -> void:
 	mi.translate_object_local(Vector3(0, 0, -1.4))
 	var tw := create_tween()
 	tw.set_parallel(true)
-	tw.tween_property(mat, "albedo_color:a", 0.0, 0.22)
-	tw.tween_property(mi, "rotation:y", mi.rotation.y + 2.2, 0.22)
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.3)
+	tw.tween_property(mi, "rotation:y", mi.rotation.y + 2.6, 0.3)
+	tw.tween_property(mi, "scale", Vector3(1.35, 1.2, 1.35), 0.3)
 	tw.chain().tween_callback(mi.queue_free)
 
 
